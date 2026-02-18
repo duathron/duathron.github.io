@@ -62,5 +62,5 @@ or hiring manager, feel free to reach out.
 
 ## Get in touch
 
-- 💼 [LinkedIn](www.linkedin.com/in/christian-huhn-76a407114)
+- 💼 [LinkedIn](https://www.linkedin.com/in/christian-huhn-76a407114)
 - 🐙 [GitHub](https://github.com/duathron)
