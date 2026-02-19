@@ -9,7 +9,7 @@ tags:
   - easy
 published: true
 image:
-  path: /assets/img/posts/hfb1stolenmount/cover.jpg
+  path: /assets/img/posts/hfb1stolenmount/cover.png
   alt: "Hack From the Back 1: Stolen Mount"
 ---
 
