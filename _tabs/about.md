@@ -7,14 +7,14 @@ order: 4
 # About
 
 Technology has been part of my life for as long as I can remember. A Game Boy at four.
-A self-built 486 at twelve – assembled from spare parts salvaged from my parents'
+A self-built 486 at twelve - assembled from spare parts salvaged from my parents'
 office, running DOS and Windows 95. As a teenager, I was the one managing the network
 infrastructure of my parents' company and organising LAN parties with friends, long
 before any of us had a driver's licence.
 
 The passion was always there. Life, however, had other plans.
 
-I ended up in photography – and I committed to it fully. I completed my apprenticeship
+I ended up in photography and I committed to it fully. I completed my apprenticeship
 as the top graduate of my regional photographers' guild, before going on to earn a
 Bachelor of Arts with a final grade of 1.0. What kept me engaged wasn't just the visual
 craft. Photography is a deeply technical profession that demands constant adaptation:
@@ -29,15 +29,15 @@ aerial cinematography, holding a certified EU drone pilot licence (class A2).
 
 Since 2014, I've worked as a freelance commercial photographer for corporate clients
 and enterprises across Germany and beyond. Precision, discretion, and delivering under
-pressure are not skills I'm still developing – they're the foundation I bring with me.
+pressure are not skills I'm still developing. They're the foundation I bring with me.
 
 ---
 
-In November 2025, I made a decision: to stop ignoring where my instincts have always
+In November 2025, I made the decision to stop ignoring where my instincts have always
 pointed and take the technical curiosity that has driven every chapter of my life
 seriously – as a profession. Since then, I've been learning consistently: evenings,
-weekends, alongside a full-time freelance career and family life with a young child.
-Not the easiest conditions. But the motivation has never been the question.
+weekends, alongside a full-time freelance career and busy family life with a young child.
+Motivation has never been the question though.
 
 ## What I'm working on
 
