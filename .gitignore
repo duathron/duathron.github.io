@@ -1,9 +1,14 @@
 # Obsidian
-.obsidian/workspace.json
-.obsidian/workspace-mobile.json
+.obsidian/
+.DS_Store
 _obsidian_vault/
+
 # macOS
 .DS_Store
 
 # Drafts bleiben lokal (optional – siehe unten)
 # _drafts/
+
+/Untitled/
+/Google IT Support Professional/
+/assets/vault/
