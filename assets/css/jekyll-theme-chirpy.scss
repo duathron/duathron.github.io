@@ -1,0 +1,14 @@
+---
+---
+
+@use 'main
+{%- if jekyll.environment == 'production' -%}
+  .bundle
+{%- endif -%}
+';
+
+/* Cover image: show full image without cropping */
+.preview-img img {
+  object-fit: contain;
+  background-color: var(--card-bg);
+}
