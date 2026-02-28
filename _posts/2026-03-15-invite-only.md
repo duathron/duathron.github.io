@@ -1,6 +1,6 @@
 ---
 title: "TryHackMe — Invite Only"
-date: 2026-02-28 00:00:00 +0100
+date: 2026-03-15 00:00:00 +0100
 categories:
   - Writeups
   - TryHackMe
