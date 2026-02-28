@@ -65,7 +65,9 @@ To understand what's already known about this file, the SHA256 hash was calculat
 sha256sum MrPhisher.docm
 ```
 
-Searching the hash `51eab087b585482a1ea66a9f8623140557a217e01227622fb822b154c8edb86d` on [VirusTotal](https://www.virustotal.com/gui/file/51eab087b585482a1ea66a9f8623140557a217e01227622fb822b154c8edb86d/) showed extensive detection results — multiple engines flagging the file as malicious, with references to VBA macros and trojan downloaders. This confirmed the file was worth investigating further, but VirusTotal doesn't reveal the flag itself.
+Searching the hash `51eab087b585482a1ea66a9f8623140557a217e01227622fb822b154c8edb86d` on [VirusTotal](https://www.virustotal.com/gui/file/51eab087b585482a1ea66a9f8623140557a217e01227622fb822b154c8edb86d/) showed extensive detection results — two engines flagging the file as malicious, with references to VBA macros and trojan downloaders. This confirmed the file used a suspicious macro and needs to be investigated further.
+
+<img src="/assets/img/posts/mrphisher/vt-mrphisher.png" alt="VirusTotal flags the file as (potentially) malicious" width="700">
 
 > **Note:** Checking file hashes against VirusTotal is a standard first step in malware triage. It's fast, non-invasive, and provides immediate context — detection rates, community comments, behavioural reports — without having to execute the file.
 
