@@ -110,7 +110,7 @@ The existence of `creds.txt` on the same share is promising.
 
 ```
 Archive Password
-90eb7723a657b6597100aafef171d9f2 (md5)
+90############################f2 (md5)
 ```
 
 <img src="/assets/img/posts/hfb1stolenmount/creds-md5.png" alt="Packet 214 showing creds.txt contents with MD5 hash" width="700">
@@ -119,7 +119,7 @@ The password is not stored in plaintext — it's an MD5 hash.
 
 ### Cracking the MD5 Hash
 
-MD5 hashes of simple strings are trivially reversible via rainbow table lookup. Submitting the hash `90eb7723a657b6597100aafef171d9f2` to [CrackStation](https://crackstation.net/) instantly returns the plaintext: **`avengers`**.
+MD5 hashes of simple strings are trivially reversible via rainbow table lookup. Submitting the hash `90############################f2` to [CrackStation](https://crackstation.net/) instantly returns the plaintext: **`a######s`**.
 
 > **Note:** This is not "cracking" in the brute-force sense. CrackStation uses precomputed lookup tables. MD5 hashes of common words and short strings are effectively just obfuscation, not real protection — exactly the same lesson as with hashed IDs in IDOR vulnerabilities.
 
@@ -132,7 +132,7 @@ MD5 hashes of simple strings are trivially reversible via rainbow table lookup. 
 With the recovered password, extract the ZIP:
 
 ```bash
-unzip -P 'avengers' secret.zip
+unzip -P 'a######s' secret.zip
 ```
 
 The archive contains a single file: `secret.PNG` — an image of a QR code.
