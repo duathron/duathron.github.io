@@ -1,6 +1,6 @@
 ---
-title: "TryHackMe — Snort Challenge - The Basics"
-date: 2026-03-19 00:00:00 +0100
+title: TryHackMe — Snort Challenge - The Basics
+date: 2026-03-24 00:00:00 +0100
 categories:
   - Writeups
   - TryHackMe
@@ -10,7 +10,7 @@ tags:
 published: true
 image:
   path: /assets/img/posts/snort-challenges-1/cover.png
-  alt: "Snort Challenge - The Basics"
+  alt: Snort Challenge - The Basics
 ---
 
 ## Overview

@@ -1,6 +1,6 @@
 ---
-title: "TryHackMe — Invite Only"
-date: 2026-03-15 00:00:00 +0100
+title: TryHackMe — Invite Only
+date: 2026-03-17 00:00:00 +0100
 categories:
   - Writeups
   - TryHackMe
@@ -10,7 +10,7 @@ tags:
 published: true
 image:
   path: /assets/img/posts/invite-only/cover.png
-  alt: "Invite Only"
+  alt: Invite Only
 ---
 
 ## Overview
