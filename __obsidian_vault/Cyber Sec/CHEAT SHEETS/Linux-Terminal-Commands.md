@@ -583,7 +583,7 @@ ls -la /home/*/
 ## Related
 
 - [[PowerShell Commands]] – Windows equivalent for IT support and security tasks
-- [[ffuf]] – Web directory and parameter fuzzing
+- [[ffuf Cheat Sheet]] – Web directory and parameter fuzzing
 - [[Snort]] – Network intrusion detection, rule writing
 
 ---

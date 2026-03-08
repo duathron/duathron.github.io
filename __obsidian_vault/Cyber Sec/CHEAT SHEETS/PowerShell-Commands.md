@@ -565,7 +565,7 @@ Get-AppLockerPolicy -Effective | Select-Xml -XPath "//FilePathRule" | Select-Obj
 ## Related
 
 - [[Linux Terminal Commands]] – Linux/Unix equivalent commands for IT support and security tasks
-- [[ffuf]] – Web fuzzing tool, often used in combination with PowerShell recon output
+- [[ffuf Cheat Sheet]] – Web fuzzing tool, often used in combination with PowerShell recon output
 - [[Snort]] – Network-level detection complementing host-based PowerShell analysis
 
 ---

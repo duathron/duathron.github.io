@@ -45,3 +45,50 @@ die interessanten packets stammen dabei von der ip 10.10.196.55.
 die frage nach protokoll und port ist klar gelöst: TCP / 4444
 and the tool commonly used with this port? Metasploit. 4444 is the default port for reverse shells / meterpreter
 
+________________________________
+
+
+lookup room
+
+ip zu /etc/hosts hinzufügen, weil sonst dns aufgelöst wird und nichts gefunden.
+
+nmap -sV -sC -O TARGET_IP 
+-> SSH und TCP offen (22 und 80)
+-> Apache auf Linux
+
+ffuf -w '/home/kali/wordlists/SecLists/Discovery/Web-Content/common.txt' -u http://TARGET_IP/FUZZ -recursion -recursion-depth 2 -p 0.2     
+
+enteckt mehrere seiten, darunter versteckte dateien mit mit status 403 und index.php mit 302
+
+
+pause wichtig, weil sonst timeout vom server! beim zweiten versuch mit ffuf und redirects folgen -r -> index.php status 200
+
+ffuf -w '/home/kali/wordlists/SecLists/Passwords/Leaked-Databases/rockyou.txt' -u http://lookup.thm/login.php -X POST -d 'username=admin&password=FUZZ' -p 0.3 -fs 74 -c 
+falsche credentials ergeben status 200 mit mitteilung, dass es falsch ist und weiterleitung in 3 sekunden. also -fs 74 (größe der antwortseite)
+
+echo -e "admin\Administrator" | ffuf -w '/home/kali/wordlists/SecLists/Passwords/Common-Credentials/Pwdb_top-1000000.txt':FUZZ -w  -:users -u http://lookup.thm/login.php -X POST -d 'username={users}&password=FUZZ' -H "Content-Type: application/x-www-form-urlencoded" -p 0.3 -fs 74 -c 
+als alternative um zumindest die beiden usernames zu testen. keine schnellen funde
+
+dann nochmal manuell nachgehakt: admin ergibt die fehlermeldung: wrong password.
+user/ pass = karl/password ergibt wrong username and password!
+
+also gibt es den user admin!  also nochmal rockyou herausgeholt mit user admin und treffer! = password: password123
+
+das wirft natürlich die frage auf: gibt es andere user? nochmal baseline für die falsche nutzerkennung abgeholt: -fs 74
+und ja! direkte treffer: admin und jose
+
+dann jose cracken - selber ansatz wie beim admin passwort, nur username=jose. das passwort ist "password123"
+
+funktioniert für jose. admin gibt eine fehlermeldung -> also falscher filter. bei jose gab es die response size 0 das richtige password. also nochmal den admin brute forcen mit -fs 0
+
+der login bei jose führt zu files. lookup.thm -> also die subdomain in /etc/hosts
+
+dann loggen wir uns bei jose ein und kommen auf ein virtuelles laufwerk:
+http://files.lookup.thm/elFinder/files/credentials.txt?_t=1712061058
+http://files.lookup.thm/elFinder/files/test?_t=1712061058
+http://files.lookup.thm/elFinder/files/admin.txt?_t=1712061058
+
+sieht nach enumeration aus -> vielleicht versteckte dateien?
+
+
+scheinbar keine offensichtlichen subdomains außer "www"

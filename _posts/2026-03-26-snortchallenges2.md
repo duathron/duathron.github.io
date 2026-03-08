@@ -1,5 +1,5 @@
 ---
-title: "TryHackMe — Snort Challenge - Live Attacks"
+title: TryHackMe — Snort Challenge - Live Attacks
 date: 2026-03-26 00:00:00 +0100
 categories:
   - Writeups
@@ -7,10 +7,11 @@ categories:
 tags:
   - snort-challenges-2
   - medium
-published: true
+published: true 
+related_notes: ["[[Snort]]", "[[IPS]]", "[[SSH]]", "[[Reverse Shell]]", "[[Metasploit]]"]
 image:
   path: /assets/img/posts/snort-challenges-2/cover.png
-  alt: "Snort Challenge - Live Attacks"
+  alt: Snort Challenge - Live Attacks
 ---
 
 ## Overview

@@ -11,6 +11,7 @@ published: true
 image:
   path: /assets/img/posts/confidential/cover.png
   alt: "Confidential"
+related_notes: ["[[Forensics]]", "[[PDF Analysis]]", "[[QR Code]]"]
 ---
 
 ## Overview

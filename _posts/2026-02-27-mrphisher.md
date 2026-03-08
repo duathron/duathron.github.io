@@ -11,6 +11,7 @@ published: true
 image:
   path: /assets/img/posts/mrphisher/cover.png
   alt: "Mr Phisher"
+related_notes: ["[[Phishing]]", "[[VBA Macros]]", "[[XOR]]", "[[Malware Analysis]]"]
 ---
 
 ## Overview

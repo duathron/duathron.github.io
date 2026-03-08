@@ -8,6 +8,11 @@ tags:
   - hfb1stolenmount
   - easy
 published: true
+related_notes:
+  - "[[Wireshark]]"
+  - "[[Network Forensics]]"
+  - "[[PCAP Analysis]]"
+
 image:
   path: /assets/img/posts/hfb1stolenmount/cover.png
   alt: "Hack From the Back 1: Stolen Mount"

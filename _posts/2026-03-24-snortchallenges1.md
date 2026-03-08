@@ -11,6 +11,7 @@ published: true
 image:
   path: /assets/img/posts/snort-challenges-1/cover.png
   alt: Snort Challenge - The Basics
+related_notes: ["[[Snort]]"]
 ---
 
 ## Overview

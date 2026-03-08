@@ -7,6 +7,7 @@ published: true
 image:
   path: /assets/img/posts/infinity-shell/cover.png
   alt: "Infinity Shell"
+related_notes: ["[[Forensics]]", "[[Web Shells]]", "[[Log Analysis]]", "[[Base64]]"]
 ---
 
 ## Overview
