@@ -1,7 +1,7 @@
 # Obsidian
 .obsidian/
 .DS_Store
-_obsidian_vault/
+__obsidian_vault/
 
 # macOS
 .DS_Store

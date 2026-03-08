@@ -9,11 +9,19 @@ Snort ist ein Open-Source Network Intrusion Detection and Prevention System (NID
 
 Snort läuft in drei grundlegenden Betriebsmodi: Sniffer, Packet Logger und IDS/IPS.
 
+> [!example] Tools — Snort
+> | Tool | Typ | Zweck |
+> |------|-----|-------|
+> | **snort** | CLI (Dienst + Treiber) | IDS/IPS-Engine, Sniffer, Packet Logger, PCAP-Analyse |
+> | **Wireshark** | GUI | Snort-Binärlogs (`.pcap`/`.log`) öffnen und inspizieren |
+> | **local.rules** | Textdatei | Eigene Erkennungsregeln schreiben und testen |
+> | **snort.conf** | Konfigurationsdatei | Globale Snort-Konfiguration, Regelsets einbinden |
+
 ---
 
 ## Betriebsmodi
 
-### Mode 1: Sniffer Mode
+### ==Mode 1: Sniffer Mode==
 
 Liest Pakete live vom Interface und gibt sie auf der Konsole aus. Kein Logging, keine Regelprüfung – reine Paketanzeige.
 
@@ -26,7 +34,7 @@ sudo snort -X             # rohe Paketdaten als Hex-Dump ab Link Layer
 
 Typischer Anwendungsfall: schnelle Überprüfung, ob Traffic überhaupt ankommt.
 
-### Mode 2: Packet Logger Mode
+### ==Mode 2: Packet Logger Mode==
 
 Schreibt Pakete auf die Festplatte. Snort erkennt automatisch, dass es in diesen Modus wechseln soll, sobald `-l` angegeben wird.
 
@@ -40,7 +48,7 @@ sudo snort -r snort.log.xxxxxxxx -n 10        # nur erste 10 Pakete lesen
 
 Logs werden standardmäßig in `/var/log/snort/` abgelegt, sortiert nach IP-Verzeichnissen. Mit `-b` wird eine einzige Binärdatei erzeugt, die auch Wireshark lesen kann.
 
-### Mode 3: IDS/IPS Mode
+### ==Mode 3: IDS/IPS Mode==
 
 Wendet Regeln auf den Traffic an. Erfordert zwingend `-c` mit einem Konfigurationsfile.
 
@@ -53,7 +61,7 @@ sudo snort -c /etc/snort/snort.conf -i eth0      # auf Live-Interface
 
 IPS (aktives Blockieren) erfordert zusätzlich DAQ inline mode, in TryHackMe-Kontext mit `-Q` aktiviert.
 
-### Mode 4: PCAP Investigation
+### ==Mode 4: PCAP Investigation==
 
 Analyse von gespeicherten Captures ohne Live-Interface.
 
@@ -67,7 +75,7 @@ sudo snort --pcap-list="datei1.pcap datei2.pcap" -c /etc/snort/snort.conf
 
 ## Wichtige Flags
 
-### Grundlegende Parameter
+### ==Grundlegende Parameter==
 
 | Flag | Beschreibung | Anwendungsfall |
 |------|-------------|----------------|
@@ -80,7 +88,7 @@ sudo snort --pcap-list="datei1.pcap datei2.pcap" -c /etc/snort/snort.conf
 | `-T` | Konfigurationsfile testen ohne Snort zu starten | Config validieren vor Einsatz |
 | `-?` | Hilfe anzeigen | |
 
-### Input / Output
+### ==Input / Output==
 
 | Flag         | Beschreibung                                  | Anwendungsfall                                       |
 | ------------ | --------------------------------------------- | ---------------------------------------------------- |
@@ -92,7 +100,7 @@ sudo snort --pcap-list="datei1.pcap datei2.pcap" -c /etc/snort/snort.conf
 | `-n <zahl>`  | Maximale Paketanzahl angeben, dann stoppen    | Gezielter Blick: `-n 65`                             |
 | `-L <datei>` | Binäres Log unter definiertem Namen speichern | Kontrolle über Dateinamen                            |
 
-### Alert-Modi (`-A`)
+### ==Alert-Modi (`-A`)==
 
 | Flag | Beschreibung | Anwendungsfall |
 |------|-------------|----------------|
@@ -108,7 +116,7 @@ Typische Kombination für PCAP-Analyse im Room:
 sudo snort -c local.rules -r datei.pcap -A full -l .
 ```
 
-### Netzwerk-Parameter
+### ==Netzwerk-Parameter==
 
 | Flag | Beschreibung | Anwendungsfall |
 |------|-------------|----------------|
@@ -135,7 +143,7 @@ Beispiel:
 alert tcp any any -> any 80 (msg:"HTTP Traffic"; sid:1000001; rev:1;)
 ```
 
-### Header-Felder
+### ==Header-Felder==
 
 | Feld | Beschreibung | Beispiele |
 |------|-------------|----------|
@@ -145,11 +153,12 @@ alert tcp any any -> any 80 (msg:"HTTP Traffic"; sid:1000001; rev:1;)
 | Port | Einzel-Port, Bereich, Negation | `any`, `80`, `1:1024`, `!22` |
 | Direction | Richtungsoperator | `->` (einseitig), `<>` (bidirektional) |
 
-Kein `<-` Operator – stattdessen Quell- und Zielseite tauschen oder `<>` verwenden.
+> [!warning] Kein `<-` Operator
+> Snort unterstützt keinen `<-` Richtungsoperator. Stattdessen Quell- und Zielseite tauschen oder `<>` (bidirektional) verwenden.
 
-### Wichtige Rule-Options
+### ==Rule-Options: General==
 
-**General Options** – Metainformationen und Identifikation der Regel:
+Metainformationen und Identifikation der Regel:
 
 | Option | Beschreibung | Beispiel |
 |--------|-------------|---------|
@@ -160,7 +169,9 @@ Kein `<-` Operator – stattdessen Quell- und Zielseite tauschen oder `<>` verwe
 | `classtype:` | Klassifizierung des Angriffs (definiert in classification.config) | `classtype:attempted-admin` |
 | `priority:` | Priorität 1 (hoch) bis 10 (niedrig); überschreibt classtype-Default | `priority:1` |
 
-**Payload Options** – Durchsuchen des Paketinhalts:
+### ==Rule-Options: Payload==
+
+Durchsuchen des Paketinhalts:
 
 | Option | Beschreibung | Beispiel |
 |--------|-------------|---------|
@@ -173,9 +184,12 @@ Kein `<-` Operator – stattdessen Quell- und Zielseite tauschen oder `<>` verwe
 | `within:` | Maximale Distanz zum Ende des vorherigen `content`-Treffers | `content:"ABC"; content:"DEF"; within:20;` |
 | `pcre:` | Perl Compatible Regular Expressions für flexible Mustererkennung | `pcre:"/union\s+select/i";` |
 
-> **Merkhilfe offset/depth vs. distance/within:** `offset` und `depth` beziehen sich auf den Anfang des Payloads (absolut). `distance` und `within` beziehen sich auf das Ende des vorherigen `content`-Treffers (relativ). Beide Paare können kombiniert werden, aber nicht untereinander gemischt.
+> [!tip] Merkhilfe: offset/depth vs. distance/within
+> `offset` und `depth` beziehen sich auf den **Anfang des Payloads** (absolut). `distance` und `within` beziehen sich auf das **Ende des vorherigen `content`-Treffers** (relativ). Beide Paare können kombiniert werden, aber nicht untereinander gemischt.
 
-**Non-Payload Options** – Filterung auf Header-Ebene ohne Payload-Inspektion:
+### ==Rule-Options: Non-Payload==
+
+Filterung auf Header-Ebene ohne Payload-Inspektion:
 
 | Option | Beschreibung | Beispiel |
 |--------|-------------|---------|
@@ -187,14 +201,15 @@ Kein `<-` Operator – stattdessen Quell- und Zielseite tauschen oder `<>` verwe
 | `ttl:` | IP Time-to-Live-Wert prüfen | `ttl:<3;` (Traceroute-Erkennung) |
 | `threshold:` | Häufigkeitsbasierte Alerting-Schwelle | Rate-Limiting bei Brute Force |
 
-Beispielregel mit `sameip` (aus Task 9 des Rooms):
+Beispielregel mit `sameip`:
 ```
 alert ip any any <> any any (msg:"Same Source and Destination IP"; sameip; sid:1000004; rev:1;)
 ```
 
-> **Hinweis aus dem Room:** `sameip` mit Protokoll `ip` matcht alle Pakettypen. Soll nur TCP oder UDP gefiltert werden, muss für jedes Protokoll eine separate Regel geschrieben werden – Snort unterstützt kein Protokoll-OR in einem Header.
+> [!note] `sameip` und Protokoll-Einschränkung
+> `sameip` mit Protokoll `ip` matcht alle Pakettypen. Soll nur TCP oder UDP gefiltert werden, muss für jedes Protokoll eine separate Regel geschrieben werden – Snort unterstützt kein Protokoll-OR in einem Header.
 
-### TCP-Flag-Zeichen
+### ==TCP-Flag-Zeichen==
 
 | Zeichen | Flag |
 |---------|------|
@@ -215,7 +230,7 @@ BPF (Berkeley Packet Filter) ist eine Filtersprache, die von tcpdump stammt und 
 
 BPF-Filter sind kein Ersatz für Snort-Regeln. Sie reduzieren das Rauschen oder grenzen den Analyse-Scope ein, bevor die Regelprüfung greift.
 
-### Syntax-Grundlagen
+### ==Syntax-Grundlagen==
 
 BPF-Ausdrücke bestehen aus **Primitiven** (einzelne Bedingung) und **Operatoren** (`and`, `or`, `not`). Klammern gruppieren Ausdrücke, müssen aber ggf. mit `\` escaped werden.
 
@@ -225,7 +240,7 @@ sudo snort -r snort.log.xxxxxxxx 'AUSDRUCK'
 sudo snort -c snort.conf -i eth0 'AUSDRUCK'
 ```
 
-### Filter-Primitive
+### ==Filter-Primitive==
 
 | Primitiv | Beschreibung | Beispiel |
 |----------|-------------|---------|
@@ -243,14 +258,9 @@ sudo snort -c snort.conf -i eth0 'AUSDRUCK'
 | `icmp` | Nur ICMP-Traffic | `icmp` |
 | `ip` | Nur IP-Pakete (kein ARP etc.) | `ip` |
 
-### Operatoren und Kombinationen
+### ==Operatoren und Kombinationen==
 
 ```bash
-# Einzelne Primitiven
-sudo snort -r snort.log.xxxxxxxx 'tcp'
-sudo snort -r snort.log.xxxxxxxx 'port 22'
-sudo snort -r snort.log.xxxxxxxx 'host 10.10.10.5'
-
 # AND – beide Bedingungen müssen zutreffen
 sudo snort -r snort.log.xxxxxxxx 'tcp and port 22'
 sudo snort -r snort.log.xxxxxxxx 'host 10.10.10.5 and port 80'
@@ -268,12 +278,13 @@ sudo snort -r snort.log.xxxxxxxx 'tcp and (port 80 or port 443)'
 sudo snort -r snort.log.xxxxxxxx 'not (host 192.168.1.105 and udp and port 514)'
 ```
 
-Wichtig: `tcp and icmp` ist ungültig – ein Paket kann nicht gleichzeitig TCP und ICMP sein. Snort gibt in diesem Fall eine Fehlermeldung aus. Stattdessen `tcp or icmp` verwenden.
+> [!warning] `tcp and icmp` ist ungültig
+> Ein Paket kann nicht gleichzeitig TCP und ICMP sein — Snort gibt eine Fehlermeldung aus. `tcp or icmp` verwenden.
 
-### Praxismuster
+### ==Praxismuster==
 
 ```bash
-# Nur SSH-Traffic aus dem Log lesen (wie im THM Snort Challenge: Live Attacks)
+# Nur SSH-Traffic aus dem Log lesen
 sudo snort -r snort.log.xxxxxxxx 'tcp and port 22'
 
 # Traffic eines bestimmten Angreifers isolieren
@@ -289,20 +300,13 @@ sudo snort -c snort.conf -i eth0 'not host 192.168.1.1'
 sudo snort -c local.rules -r datei.pcap -A full -l . 'tcp and port 21'
 ```
 
-### BPF über die `-F` Flag aus Datei laden
-
-Bei komplexen oder wiederverwendbaren Filtern kann der Ausdruck in eine Datei ausgelagert werden:
+### ==BPF aus Datei laden (`-F`)==
 
 ```bash
-# Datei bpf.filter anlegen:
-# not (host 192.168.1.105 and udp and port 514)
-
 sudo snort -c snort.conf -i eth0 -F /etc/snort/bpf.filter
 ```
 
-Der Inhalt der Datei wird beim Start eingelesen und im Snort-Banner als `Reading filter from bpf file:` bestätigt.
-
-### Unterschied BPF vs. Snort-Regeln
+### ==Unterschied BPF vs. Snort-Regeln==
 
 | | BPF-Filter | Snort-Regeln |
 |-|-----------|-------------|
@@ -344,7 +348,9 @@ sudo snort -r snort.log.xxxxxxxx -n 10 -X
 sudo snort -r snort.log.xxxxxxxx 'tcp and port 22'
 ```
 
-Beim Arbeiten mit Zwischen-Logfiles: erst mit `-l .` ein Intermediate File erzeugen, dann mit `-r` darauf filtern – direktes `-n 65` auf das PCAP liefert andere Ergebnisse, weil Snort erst liest, dann filtert.
+> [!tip] Intermediate Logfiles
+> Beim Arbeiten mit Zwischen-Logfiles: erst mit `-l .` ein Intermediate File erzeugen, dann mit `-r` darauf filtern. Direktes `-n 65` auf das PCAP liefert andere Ergebnisse, weil Snort erst liest, dann filtert.
+
 ---
 
 ## Snort-Architektur: Main Components
@@ -367,15 +373,11 @@ Beim Arbeiten mit Zwischen-Logfiles: erst mit `-l .` ein Intermediate File erzeu
 | **Registered Rules** | Kostenlos | Registrierung erforderlich | Subscriber-Regeln mit 30 Tagen Verzögerung |
 | **Subscriber Rules** | Kostenpflichtig (Abo) | Abo erforderlich | Hauptregelset, Updates 2x wöchentlich (Di + Do) |
 
-Nach der Installation müssen Community- oder Subscriber-Regeln manuell in der `snort.conf` eingetragen werden. Bestehende Konfigurationsdateien nie ersetzen – immer manuell editieren oder über Update-Tools ergänzen, um Fehler und fehlende Features zu vermeiden.
-
 ---
 
 ## snort.conf – Wichtige Konfigurationsabschnitte
 
-### Step 1: Netzwerkvariablen
-
-Legt fest, welches Netz geschützt wird und wo die Regeln liegen.
+### ==Step 1: Netzwerkvariablen==
 
 | Variable | Bedeutung | Beispiel |
 |----------|----------|---------|
@@ -385,9 +387,7 @@ Legt fest, welches Netz geschützt wird und wo die Regeln liegen.
 | `SO_RULE_PATH` | Pfad für Registered/Subscriber SO-Regeln | `$RULE_PATH/so_rules` |
 | `PREPROC_RULE_PATH` | Pfad für Preprocessor-Regeln | `$RULE_PATH/plugin_rules` |
 
-### Step 2: Decoder / DAQ-Modus
-
-Steuert den IPS-Modus. Für Single-Node-IPS empfohlen: `afpacket`.
+### ==Step 2: Decoder / DAQ-Modus==
 
 | Einstellung | Bedeutung | Beispiel |
 |------------|----------|---------|
@@ -406,18 +406,15 @@ Steuert den IPS-Modus. Für Single-Node-IPS empfohlen: `afpacket`.
 | `ipfw` | Inline | OpenBSD/FreeBSD |
 | `dump` | Test | Inline- und Normalisierungs-Tests |
 
-### Step 6: Output Plugins
-
-Steuert Format und Ziel von Logs und Alerts. Standard: Konsolenausgabe. Für Produktivbetrieb hier Syslog, Datenbank oder unified2-Output konfigurieren.
-
-### Step 7: Regelsets einbinden
+### ==Step 7: Regelsets einbinden==
 
 | Tag | Bedeutung | Beispiel |
 |----|----------|---------|
 | `include $RULE_PATH/local.rules` | Lokale eigene Regeln (immer aktiv) | Standardpfad für selbst geschriebene Regeln |
 | `#include $RULE_PATH/rulename` | Heruntergeladene Regelsets (auskommentiert = deaktiviert) | `#` entfernen zum Aktivieren |
 
-> **`#` ist der Kommentaroperator.** Eine Zeile mit `#` ist deaktiviert. Zum Aktivieren das `#` entfernen.
+> [!note] `#` ist der Kommentaroperator
+> Eine Zeile mit `#` ist deaktiviert. Zum Aktivieren das `#` entfernen. Bestehende Konfigurationsdateien nie ersetzen – immer manuell editieren.
 
 ---
 

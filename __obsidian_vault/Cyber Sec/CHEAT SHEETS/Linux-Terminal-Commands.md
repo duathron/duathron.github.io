@@ -9,7 +9,7 @@ Reference for IT support, Blue Team analysis, and Red Team reconnaissance. Comma
 
 ---
 
-## Navigation & File System
+## ==Navigation & File System==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -17,7 +17,7 @@ Reference for IT support, Blue Team analysis, and Red Team reconnaissance. Comma
 | `ls` | List directory contents | `-l` long format, `-a` show hidden, `-h` human-readable sizes, `-R` recursive |
 | `cd <dir>` | Change directory | `cd ..` up one, `cd -` previous dir, `cd ~` home |
 | `find <path> <expr>` | Search for files | `-name`, `-type f/d`, `-mtime -1` modified last 24h, `-size +1M`, `-perm` |
-| `locate <name>` | Fast file search (uses index) | `-i` case-insensitive |
+| `locate <n>` | Fast file search (uses index) | `-i` case-insensitive |
 | `tree` | Directory tree view | `-L 2` limit depth, `-a` include hidden |
 | `du` | Disk usage of directory | `-sh` summary human-readable, `-h --max-depth=1` |
 | `df` | Disk free space | `-h` human-readable, `-T` show filesystem type |
@@ -38,7 +38,7 @@ find /home -size +10M -type f 2>/dev/null
 
 ---
 
-## File Operations
+## ==File Operations==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -71,9 +71,12 @@ stat /var/www/html/images/shell.php
 cp -rp /var/log/apache2/ /tmp/evidence/
 ```
 
+> [!tip] `file` vs. file extension
+> `file` liest die Magic Bytes — die ersten Bytes des Inhalts — und erkennt das Format unabhängig von der Dateiendung. Nützlich wenn Angreifer Dateien umbenennen, um Typ zu verschleiern (z.B. `shell.png` ist eigentlich ein PHP-Script).
+
 ---
 
-## Text Processing & Search
+## ==Text Processing & Search==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -109,9 +112,12 @@ xxd suspicious_file | head -2
 grep " 404 " /var/log/apache2/access.log | awk '{print $7}' | sort | uniq -c | sort -rn
 ```
 
+> [!tip] `sort | uniq -c | sort -rn` — das Standard-Muster
+> Diese Pipeline taucht überall in der Log-Analyse auf: sortieren → deduplizieren + zählen → nach Häufigkeit sortieren. Funktioniert für IPs, URLs, User-Agents, Fehlercodes — immer wenn man wissen will, was am häufigsten vorkommt.
+
 ---
 
-## User & Group Management
+## ==User & Group Management==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -147,18 +153,21 @@ awk -F: '$3 == 0 {print $1}' /etc/passwd
 last -F -n 30
 ```
 
+> [!warning] Persistence-Check: UID 0 und Login-Shell
+> Nach einer Kompromittierung: `awk -F: '$3 == 0' /etc/passwd` zeigt alle Accounts mit Root-Rechten — sollte nur `root` sein. Und `grep -v nologin /etc/passwd` zeigt Accounts, die sich tatsächlich einloggen können.
+
 ---
 
-## Process Management
+## ==Process Management==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
 | `ps` | Snapshot of running processes | `aux` all processes with user/CPU/mem, `-ef` full format |
 | `top` | Live process monitor | `q` quit, `k` kill, `M` sort by memory |
 | `htop` | Enhanced top (if installed) | — |
-| `pgrep <name>` | Find PID by process name | `-l` show names |
+| `pgrep <n>` | Find PID by process name | `-l` show names |
 | `kill <PID>` | Send signal to process | `-9` SIGKILL (force), `-15` SIGTERM (graceful) |
-| `pkill <name>` | Kill by process name | — |
+| `pkill <n>` | Kill by process name | — |
 | `nice / renice` | Set process priority | `-n 10` low priority |
 | `jobs` | List background jobs | — |
 | `bg / fg` | Background / foreground job | — |
@@ -185,7 +194,7 @@ ps aux | awk '$1 == "root" {print}'
 
 ---
 
-## Network
+## ==Network==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -235,7 +244,7 @@ curl -s -o malware_sample.bin http://target.com/file
 
 ---
 
-## System Information
+## ==System Information==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -272,7 +281,7 @@ dmesg -T | tail -50
 
 ---
 
-## Log Analysis
+## ==Log Analysis==
 
 | Command / Path | Description |
 |----------------|-------------|
@@ -286,7 +295,7 @@ dmesg -T | tail -50
 | `/var/log/fail2ban.log` | Fail2ban blocked IPs |
 | `/var/log/kern.log` | Kernel events |
 | `/var/log/cron` | Cron job execution log |
-| `journalctl` | Systemd journal | `-u <service>` by service, `-f` follow, `--since "1 hour ago"`, `-p err` errors only |
+| `journalctl` | Systemd journal — `-u <service>` by service, `-f` follow, `--since "1 hour ago"`, `-p err` errors only |
 
 ```bash
 # Live auth log monitoring (detect brute force)
@@ -308,9 +317,12 @@ grep " 200 " /var/log/apache2/access.log | grep -E "(\.php|cmd|shell|upload)"
 journalctl -u nginx --since yesterday -p err
 ```
 
+> [!tip] Rotierte Logs nicht vergessen
+> Apache und andere Services rotieren Logs periodisch — `access.log` wird zu `access.log.1`, dann `access.log.2.gz` usw. Wenn das aktuelle Log leer ist (nach einem Angriff gecleart), liegt die Aktivität oft noch in `.log.1`. Mit `zcat` kann man `.gz`-Dateien direkt lesen: `zcat /var/log/apache2/access.log.2.gz | grep "POST"`.
+
 ---
 
-## Services & Scheduling
+## ==Services & Scheduling==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -339,55 +351,12 @@ ls -la /etc/cron.d/ /etc/cron.daily/ /etc/cron.weekly/ /etc/cron.monthly/
 systemctl list-timers
 ```
 
----
-
-## Package Management
-
-| Distro | Install | Update | Remove | Search |
-|--------|---------|--------|--------|--------|
-| Debian/Ubuntu | `apt install <pkg>` | `apt update && apt upgrade` | `apt remove <pkg>` | `apt search <pkg>` |
-| RHEL/CentOS | `yum install <pkg>` | `yum update` | `yum remove <pkg>` | `yum search <pkg>` |
-| Arch | `pacman -S <pkg>` | `pacman -Syu` | `pacman -R <pkg>` | `pacman -Ss <pkg>` |
-
-```bash
-# Check installed version of a package
-dpkg -l | grep openssh
-
-# List all installed packages (enumeration)
-dpkg --get-selections | grep -v deinstall
-
-# Check if a specific tool is installed and where
-which nmap && nmap --version
-```
+> [!warning] Cron als Persistence-Technik
+> Cron ist eine der häufigsten Persistence-Methoden nach einer Kompromittierung. Alle Locations prüfen: `/etc/crontab`, `/etc/cron.d/`, `/var/spool/cron/crontabs/` und pro User `crontab -l`. Auch systemd Timers (`systemctl list-timers`) nicht vergessen — die ersetzen auf modernen Systemen oft Cron.
 
 ---
 
-## Permissions & File Integrity
-
-```bash
-# Full permission breakdown
-ls -la /etc/passwd /etc/shadow /etc/sudoers
-
-# Find recently modified files in /etc (config tampering)
-find /etc -mtime -1 -type f 2>/dev/null
-
-# Find recently modified files anywhere (post-compromise)
-find / -mtime -1 -type f 2>/dev/null | grep -v proc
-
-# Check SUID/SGID binaries (privilege escalation vectors)
-find / -perm /6000 -type f 2>/dev/null
-
-# Compare current binary hash against known good
-sha256sum /usr/bin/sudo
-md5sum /bin/bash
-
-# Check for world-writable files
-find / -perm -o+w -type f 2>/dev/null | grep -v proc
-```
-
----
-
-## Hashing & Encoding
+## ==Hashing & Encoding==
 
 | Command | Description | Example |
 |---------|-------------|---------|
@@ -412,7 +381,7 @@ openssl s_client -connect target.com:443 2>/dev/null | openssl x509 -noout -text
 
 ---
 
-## Archiving & Compression
+## ==Archiving & Compression==
 
 | Command | Description | Common Flags |
 |---------|-------------|-------------|
@@ -437,7 +406,7 @@ unzip -P 'avengers' secret.zip
 
 ---
 
-## Redirection & Pipes
+## ==Redirection & Pipes==
 
 | Syntax | Description |
 |--------|-------------|
@@ -455,7 +424,7 @@ unzip -P 'avengers' secret.zip
 
 ---
 
-## Scripting Essentials
+## ==Scripting Essentials==
 
 ```bash
 #!/bin/bash
@@ -493,7 +462,7 @@ set -o pipefail # pipe fails if any command fails
 
 ---
 
-## Quick Reference: IT Support Scenarios
+## ==Quick Reference: IT Support Scenarios==
 
 ```bash
 # --- Disk full alert ---
@@ -523,7 +492,7 @@ nmap -sV localhost
 
 ---
 
-## Quick Reference: Blue Team / Forensics
+## ==Quick Reference: Blue Team / Forensics==
 
 ```bash
 # --- Initial triage on compromised host ---
@@ -548,7 +517,7 @@ ss -tunap | grep "10.10.10.99"
 
 ---
 
-## Quick Reference: Red Team / Recon
+## ==Quick Reference: Red Team / Recon==
 
 ```bash
 # --- Host discovery ---
@@ -594,4 +563,3 @@ ls -la /home/*/
 - [SS64 Linux Reference](https://ss64.com/bash/)
 - [The Linux Command Line (book)](https://linuxcommand.org/tlcl.php)
 - [GTFOBins – Unix binaries for privilege escalation](https://gtfobins.github.io)
-- [LOLBAS / Linux counterpart](https://gtfobins.github.io)

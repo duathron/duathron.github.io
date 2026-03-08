@@ -9,6 +9,15 @@ tags: [linux, find, cli, forensics, blue-team, cheatsheet]
 find <path> <options> <expression>
 ```
 
+> [!example] Tools — find
+> | Tool | Typ | Zweck |
+> |------|-----|-------|
+> | **find** | CLI (built-in) | Dateien nach Name, Zeit, Größe, Permissions, Owner suchen und Aktionen ausführen |
+> | **xargs** | CLI (built-in) | find-Ergebnisse effizient an andere Befehle weitergeben |
+> | **grep** | CLI (built-in) | In find-Ergebnissen nach Inhalten suchen (`-exec grep` oder via Pipe) |
+> | **sha256sum** | CLI (built-in) | Hashes gefundener Dateien für IOC-Sammlung generieren |
+> | **file** | CLI (built-in) | Tatsächlichen Dateityp prüfen (erkennt getarnte Webshells) |
+
 ---
 
 ## Syntax at a Glance
@@ -56,157 +65,94 @@ find <path> <options> <expression>
 
 ---
 
-## By File Type
+## ==By File Type==
 
 ```bash
-# Files only
-find /var/www -type f
-
-# Directories only
-find /etc -type d
-
-# Symlinks only
-find /usr/bin -type l
-
-# Empty files
-find /var/www -type f -empty
-
-# Empty directories
-find /var/www -type d -empty
+find /var/www -type f          # Files only
+find /etc -type d              # Directories only
+find /usr/bin -type l          # Symlinks only
+find /var/www -type f -empty   # Empty files
+find /var/www -type d -empty   # Empty directories
 ```
 
 ---
 
-## By Name & Extension
+## ==By Name & Extension==
 
 ```bash
-# All PHP files
 find /var/www -name "*.php"
-
-# Case-insensitive (catches .PHP, .Php, etc.)
-find /var/www -iname "*.php"
-
-# Exact filename
+find /var/www -iname "*.php"                          # case-insensitive
 find / -name "passwd" 2>/dev/null
-
-# Multiple extensions with OR
-find /var/www \( -iname "*.php" -o -iname "*.jsp" \)
-
-# Double-extension files (common webshell disguise)
-find /var/www -name "*.jpg.php" -o -name "*.png.php"
-
-# Hidden files (start with .)
-find /home -name ".*" -type f
-
-# Files matching a regex (GNU find only)
-find . -regextype posix-extended -regex '.*\.(php|jsp|aspx)$'
+find /var/www \( -iname "*.php" -o -iname "*.jsp" \) # multiple extensions
+find /var/www -name "*.jpg.php" -o -name "*.png.php"  # double-extension (webshell disguise)
+find /home -name ".*" -type f                          # hidden files
+find . -regextype posix-extended -regex '.*\.(php|jsp|aspx)$'  # GNU find only
 ```
 
 ---
 
-## By Time
+## ==By Time==
 
 ```bash
-# Modified in the last 24 hours
-find /var/www -mtime -1
-
-# Modified in the last 60 minutes
-find /tmp -mmin -60
-
-# Modified in the last 10 minutes
-find /tmp -mmin -10
-
-# Modified more than 30 days ago
-find /var/log -mtime +30
-
-# Modified between two specific dates
+find /var/www -mtime -1                                           # last 24h
+find /tmp -mmin -60                                               # last 60 minutes
+find /var/log -mtime +30                                          # older than 30 days
 find /var/www -type f -name "*.php" -newerct "2025-07-01" ! -newerct "2025-08-01"
-
-# Changed (metadata) in the last 24h — catches permission/ownership changes too
-find /etc -ctime -1
-
-# Last accessed in the last 24h
-find /home -atime -1 -type f 2>/dev/null
+find /etc -ctime -1                                               # metadata changed last 24h
 ```
+
+> [!tip] `-mtime -1` vs. `-mtime 1`
+> `-mtime -1` = geändert in den letzten 24 Stunden. `-mtime 1` = genau vor 24–48 Stunden. Für forensische Suche fast immer `-mtime -1` (mit Minus).
 
 ---
 
-## By Size
+## ==By Size==
 
 ```bash
-# Larger than 10 MB
-find /home -size +10M
-
-# Smaller than 500 KB
-find /tmp -size -500k
-
-# Exactly 48 bytes (e.g. a known one-liner webshell)
-find /var/www -size 48c
-
-# Between 1 KB and 100 KB
+find /home -size +10M           # larger than 10 MB
+find /tmp -size -500k           # smaller than 500 KB
+find /var/www -size 48c         # exactly 48 bytes (e.g. one-liner webshell)
 find /var/www -size +1k -size -100k
-
-# Larger than 500 MB (disk cleanup)
 find / -type f -size +500M 2>/dev/null
 ```
 
 ---
 
-## By Permissions
+## ==By Permissions==
 
 ```bash
-# SUID bit set (privilege escalation target)
-find / -perm -4000 -type f 2>/dev/null
-
-# SGID bit set
-find / -perm -2000 -type f 2>/dev/null
-
-# Both SUID and SGID
-find / -perm /6000 -type f 2>/dev/null
-
-# World-writable files
-find / -perm -o+w -type f 2>/dev/null
-
-# World-writable directories
-find / -type d -perm -o+w 2>/dev/null
-
-# Files with 777 permissions
+find / -perm -4000 -type f 2>/dev/null   # SUID — privilege escalation target
+find / -perm -2000 -type f 2>/dev/null   # SGID
+find / -perm /6000 -type f 2>/dev/null   # SUID + SGID
+find / -perm -o+w -type f 2>/dev/null    # world-writable files
+find / -type d -perm -o+w 2>/dev/null    # world-writable directories
 find /var/www -perm 777
-
-# Any write bit set (user, group, or other)
-find /var/www -perm /222
-
-# Files not writable by owner
-find /var/www -type f ! -perm -u=w
+find /var/www -perm /222                 # any write bit set
 ```
+
+> [!warning] SUID-Binaries — Privilege Escalation
+> `find / -perm -4000 -type f 2>/dev/null` ist einer der ersten Recon-Befehle nach einer Shell. Jedes SUID-Binary, das nicht zum System-Standard gehört, ist ein potenzieller Privilege-Escalation-Vektor. Gegen [GTFOBins](https://gtfobins.github.io) prüfen.
 
 ---
 
-## By Owner
+## ==By Owner==
 
 ```bash
-# Files owned by www-data
 find /var/www -user www-data
-
-# Files owned by root
 find /tmp -user root -type f
-
-# Files not owned by any existing user (orphaned — suspicious)
-find / -nouser 2>/dev/null
-
-# Files not owned by any existing group
+find / -nouser 2>/dev/null     # orphaned files — suspicious
 find / -nogroup 2>/dev/null
 ```
 
 ---
 
-## Combining Conditions
+## ==Combining Conditions==
 
 ```bash
-# AND (default — conditions are AND-ed automatically)
+# AND (default)
 find /var/www -type f -name "*.php" -mtime -7
 
-# OR — use \( \) for grouping
+# OR
 find /var/www \( -name "*.php" -o -name "*.jsp" \)
 
 # NOT
@@ -214,29 +160,20 @@ find /var/www -not -name "*.html"
 
 # PHP files modified recently AND owned by www-data
 find /var/www -type f -name "*.php" -mtime -3 -user www-data
-
-# Large files that are NOT log files
-find /var -size +50M -not -name "*.log"
-
-# .txt or .md files (grouped OR)
-find . \( -iname "*.txt" -o -iname "*.md" \) -print
 ```
 
 ---
 
-## Controlling Depth
+## ==Controlling Depth==
 
 ```bash
-# Limit to 2 directory levels deep
 find /etc -maxdepth 2 -type f -name "*.conf"
-
-# Skip the starting directory itself (start from level 1 down)
 find /var/www -mindepth 1 -maxdepth 3 -name "*.php"
 ```
 
 ---
 
-## Excluding Directories (`-prune`)
+## ==Excluding Directories (`-prune`)==
 
 ```bash
 # Skip node_modules
@@ -244,144 +181,109 @@ find . -path "./node_modules" -prune -o -type f -name "*.js" -print
 
 # Skip multiple directories
 find . \( -path "./node_modules" -o -path "./.git" \) -prune -o -type f -print
-
-# Exclude a log subdirectory during search
-find /var \( -path "/var/log/journal" -prune \) -o -type f -name "*.log" -print
 ```
 
 ---
 
-## Actions
+## ==Actions==
 
 ```bash
-# Print full details per result (like ls -la) — no separate -exec ls needed
-find /var/www -name "*.php" -ls
-
-# Stop after the first match
-find / -name "wp-config.php" -quit 2>/dev/null
-
-# Delete matched files directly (test with -print first!)
-find /tmp -name "*.tmp" -mtime +7 -print    # preview first
-find /tmp -name "*.tmp" -mtime +7 -delete   # then delete
+find /var/www -name "*.php" -ls           # detailed listing per result
+find / -name "wp-config.php" -quit        # stop after first match
+find /tmp -name "*.tmp" -mtime +7 -print  # preview before deleting
+find /tmp -name "*.tmp" -mtime +7 -delete # then delete
 ```
+
+> [!warning] `-delete` immer erst mit `-print` testen
+> `-delete` ist irreversibel. Erst mit `-print` die Trefferliste prüfen, dann erst `-delete` ausführen.
 
 ---
 
-## Executing Commands on Results (`-exec`)
+## ==Executing Commands (`-exec`)==
 
 ```bash
-# Print full details for each result
 find /var/www -name "*.php" -exec ls -la {} \;
-
-# Hash every result (useful for IOC collection)
 find /var/www -name "*.php" -exec sha256sum {} \;
-
-# Search inside each found file for suspicious functions
 find /var/www -name "*.php" -exec grep -l "shell_exec\|system\|passthru\|exec" {} \;
-
-# Make all shell scripts executable
-find . -type f -name "*.sh" -exec chmod +x {} \;
-
-# Copy all results to an evidence folder
 find /var/www -name "*.php" -mtime -1 -exec cp {} /tmp/evidence/ \;
 ```
 
-> **`{} \;`** — runs the command once per file  
-> **`{} +`** — passes all results at once (faster, like `xargs`)
+> `{} \;` — runs the command once per file  
+> `{} +` — passes all results at once (faster, like `xargs`)
 
 ---
 
-## Useful Combinations with Other Tools
+## ==Combinations with Other Tools==
 
 ```bash
-# Pipe results to xargs (faster than -exec for large result sets)
+# Pipe to xargs
 find /var/www -name "*.php" | xargs grep -l "base64_decode"
 
-# Use -print0 + xargs -0 for filenames with spaces or special characters
+# -print0 + xargs -0 for filenames with spaces/special chars
 find /var/www -name "*.php" -print0 | xargs -0 grep -l "base64_decode"
 
 # Count results
 find /var/www -name "*.php" | wc -l
 
-# Total size of matched files
-find /var/log -type f -name "*.log" -print0 | du -ch --files0-from=-
-
-# Sort results by modification time (newest first)
+# Sort by modification time (newest first)
 find /var/www -name "*.php" -printf "%T@ %p\n" | sort -rn | head 20
 
-# Find and check file type (catches disguised files)
+# Check actual file type (catches disguised files)
 find /var/www/uploads -type f | xargs file
 ```
 
-> Prefer `-print0` + `xargs -0` over plain pipe when filenames may contain spaces or newlines.
+> [!tip] `-print0` + `xargs -0`
+> Immer `-print0` + `xargs -0` statt plain Pipe verwenden, wenn Dateinamen Leerzeichen oder Sonderzeichen enthalten können. Robustere Alternative zu `-exec`.
 
 ---
 
-## Archiving & Backup Recipes
+## ==Forensics & Blue Team Recipes==
 
 ```bash
-# Create tar.gz of files modified in the last 7 days
-find . -type f -mtime -7 -print0 | tar --null -T - -czvf recent7days.tar.gz
-
-# Rsync only specific files found by find
-find . -type f -name "*.log" -print0 | rsync --files-from=- --from0 ./ /backup/
-
-# Archive evidence files
-find /var/www -name "*.php" -mtime -1 -print0 | tar --null -T - -czvf /tmp/evidence.tar.gz
-```
-
----
-
-## Forensics & Blue Team Recipes
-
-```bash
-# Webshell hunting — PHP files in upload directories modified recently
+# Webshell hunting — PHP in Upload-Verzeichnissen, kürzlich geändert
 find /var/www -path "*/upload*" -name "*.php" -mtime -7
 
-# Webshell hunting — search for common execution functions
+# Webshell hunting — typische Execution-Funktionen
 find /var/www -name "*.php" -exec grep -lE "shell_exec|system|passthru|exec|eval\(" {} \;
 
-# Files created by the web server process
+# Dateien erstellt durch den Webserver-Prozess
 find /var/www -user www-data -newer /var/www/html/index.php -type f
 
-# Suspicious small PHP files (one-liner shells are often < 200 bytes)
+# Verdächtig kleine PHP-Dateien (One-Liner-Shells oft < 200 Bytes)
 find /var/www -name "*.php" -size -200c
 
-# All SUID binaries (compare against known-good baseline)
+# Alle SUID-Binaries
 find / -perm -4000 -type f 2>/dev/null | sort
 
-# Files modified in /etc in the last 24h (config tampering)
+# Dateien in /etc der letzten 24h (Config-Tampering)
 find /etc -mtime -1 -type f 2>/dev/null
 
-# Executable files in /tmp or /dev/shm (malware staging areas)
+# Ausführbare Dateien in /tmp oder /dev/shm (Malware-Staging)
 find /tmp /dev/shm -type f -perm /111 2>/dev/null
 
-# All files modified after a specific reference file
-find /var/www -newer /tmp/reference_timestamp -type f
-
-# Orphaned files (no owner — possible artifact of deleted accounts)
+# Verwaiste Dateien (kein Owner)
 find / -nouser -o -nogroup 2>/dev/null
 ```
 
 ---
 
-## Red Team Recipes
+## ==Red Team Recipes==
 
 ```bash
-# World-writable directories (potential upload/drop zones)
-find / -type d -perm -o+w 2>/dev/null | grep -v proc
+find / -type d -perm -o+w 2>/dev/null | grep -v proc   # world-writable dirs
+find / -perm -4000 -type f 2>/dev/null                  # SUID binaries
+find / -name "*.conf" -o -name "wp-config.php" 2>/dev/null
+find / -name "id_rsa" -o -name "authorized_keys" 2>/dev/null
+find /home -atime -1 -type f 2>/dev/null                # recently accessed
+```
 
-# SUID binaries for privilege escalation
-find / -perm -4000 -type f 2>/dev/null
+---
 
-# Config files that might contain credentials
-find / -name "*.conf" -o -name "*.config" -o -name "wp-config.php" 2>/dev/null
+## ==Archiving & Backup==
 
-# SSH keys
-find / -name "id_rsa" -o -name "id_ed25519" -o -name "authorized_keys" 2>/dev/null
-
-# Recently accessed files (attacker activity)
-find /home -atime -1 -type f 2>/dev/null
+```bash
+find . -type f -mtime -7 -print0 | tar --null -T - -czvf recent7days.tar.gz
+find /var/www -name "*.php" -mtime -1 -print0 | tar --null -T - -czvf /tmp/evidence.tar.gz
 ```
 
 ---
@@ -391,22 +293,20 @@ find /home -atime -1 -type f 2>/dev/null
 | Mistake | Fix |
 |---------|-----|
 | Forgetting `2>/dev/null` | Output floods with permission errors |
-| Using `-mtime 1` instead of `-mtime -1` | `1` = exactly 24–48h ago; `-1` = last 24h |
-| Quoting glob patterns | Always quote: `"*.php"` not `*.php` |
-| `-exec rm {} \;` without testing first | Run with `-print` first to preview, then switch to `-delete` |
-| Searching `/` without `-type f` | Returns directories and symlinks too |
-| Plain pipe with special filenames | Use `-print0 \| xargs -0` for names with spaces or newlines |
-| `-delete` on directories | Add `-depth` flag when deleting directory trees |
+| `-mtime 1` statt `-mtime -1` | `1` = exactly 24–48h ago; `-1` = last 24h |
+| Glob-Pattern ohne Anführungszeichen | Immer quoten: `"*.php"` nicht `*.php` |
+| `-exec rm` ohne vorherigen Test | Erst `-print`, dann `-delete` |
+| `-delete` auf Verzeichnisse ohne `-depth` | `-depth` Flag hinzufügen |
 
 ---
 
 ## Portability Note
 
-GNU `find` (Linux) supports extensions like `-printf`, `-iname`, `-regextype`, and `-delete`. BSD/macOS `find` may differ — some flags are absent or behave differently. For scripts intended to run on multiple platforms, stick to POSIX constructs or test on the target system.
+GNU `find` (Linux) unterstützt `-printf`, `-iname`, `-regextype`, `-delete`. BSD/macOS `find` weicht ab. Für plattformübergreifende Scripts nur POSIX-Konstrukte verwenden.
 
 ---
 
-## Related
+## Bezug zu anderen Themen
 
-- [[Linux-Terminal-Commands]] – Full Linux reference including `grep`, `awk`, `stat`, `strings`
-- [[Detecting Web Shells]] – Practical `find` usage in a forensic context
+- [[Linux-Terminal-Commands]] – Vollständige Linux-Referenz inkl. `grep`, `awk`, `stat`, `strings`
+- [[Detecting Web Shells]] – Praktischer `find`-Einsatz im forensischen Kontext

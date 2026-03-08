@@ -11,11 +11,19 @@ Schneller Web-Fuzzer in Go. Ersetzt das `FUZZ`-Keyword in URL, Headern oder POST
 ffuf -w wordlist.txt -u http://target.com/FUZZ
 ```
 
+> [!example] Tools — ffuf
+> | Tool | Typ | Zweck |
+> |------|-----|-------|
+> | **ffuf** | CLI | Web-Fuzzer: Verzeichnisse, Subdomains, Parameter, Credentials |
+> | **SecLists** | Wordlist-Sammlung | Vorgefertigte Wordlists für alle gängigen Fuzz-Szenarien |
+> | **Burp Suite** | GUI/Proxy | Traffic-Inspektion; per `-x` oder `-replay-proxy` integrierbar |
+> | **seq** | CLI (Linux) | Zahlenlisten für ID-Enumeration erzeugen (`seq 1 1000 > ids.txt`) |
+
 ---
 
 ## Flags – Übersicht
 
-### Input
+### ==Input==
 
 | Flag | Beschreibung | Beispiel |
 |------|-------------|---------|
@@ -29,10 +37,10 @@ ffuf -w wordlist.txt -u http://target.com/FUZZ
 | `-recursion` | Gefundene Verzeichnisse rekursiv fuzzen (nur mit URL-Ende `/FUZZ`) | `-recursion` |
 | `-recursion-depth <n>` | Maximale Rekursionstiefe | `-recursion-depth 2` |
 | `-e <ext>` | Dateiendungen anhängen (kommagetrennt) | `-e .php,.html,.txt` |
-| `-mode <modus>` | Multi-Wordlist-Modus: `clusterbomb` (alle Kombos), `pitchfork` (synchron), `sniper` | `-mode clusterbomb` |
+| `-mode <modus>` | Multi-Wordlist-Modus: `clusterbomb` (alle Kombos), `pitchfork` (synchron) | `-mode clusterbomb` |
 | `-request <datei>` | Raw HTTP-Request aus Datei laden (z.B. aus Burp) | `-request req.txt` |
 
-### Matcher – was angezeigt wird
+### ==Matcher – was angezeigt wird==
 
 | Flag | Beschreibung | Beispiel |
 |------|-------------|---------|
@@ -42,7 +50,7 @@ ffuf -w wordlist.txt -u http://target.com/FUZZ
 | `-mw <wörter>` | Match auf Anzahl Wörter in der Antwort | `-mw 50` |
 | `-mr <regex>` | Match auf Regex-Muster in der Antwort | `-mr "Welcome"` |
 
-### Filter – was ausgeblendet wird
+### ==Filter – was ausgeblendet wird==
 
 Jeder Matcher hat ein Filter-Gegenstück. Filter schließen Treffer aus, Matcher schließen ein.
 
@@ -55,19 +63,20 @@ Jeder Matcher hat ein Filter-Gegenstück. Filter schließen Treffer aus, Matcher
 | `-fr <regex>` | Filter auf Regex-Muster | `-fr "error"` |
 | `-ac` | Auto-Calibration: erkennt und filtert Standardantworten automatisch | `-ac` |
 
-> `-ac` ist praktisch wenn man die Standard-Response-Größe nicht kennt. Führt erst ein paar Kalibrierungs-Requests durch und filtert dann identische Antworten heraus.
+> [!tip] `-ac` Auto-Calibration
+> Praktisch wenn die Standard-Response-Größe unbekannt ist. ffuf führt erst einige Kalibrierungs-Requests durch und filtert dann identische Antworten automatisch heraus.
 
-### Output
+### ==Output==
 
 | Flag | Beschreibung | Beispiel |
 |------|-------------|---------|
 | `-o <datei>` | Ergebnisse in Datei schreiben | `-o results.json` |
-| `-of <format>` | Ausgabeformat: `json`, `html`, `md`, `csv`, `all` (Standard: json) | `-of html` |
+| `-of <format>` | Ausgabeformat: `json`, `html`, `md`, `csv`, `all` | `-of html` |
 | `-c` | Farbige Ausgabe | `-c` |
 | `-v` | Verbose – zeigt vollständige URL in Ergebnissen | `-v` |
 | `-s` | Silent Mode – nur Treffer ausgeben, kein Banner | `-s` |
 
-### Performance & Stealth
+### ==Performance & Stealth==
 
 | Flag | Beschreibung | Beispiel |
 |------|-------------|---------|
@@ -78,19 +87,19 @@ Jeder Matcher hat ein Filter-Gegenstück. Filter schließen Treffer aus, Matcher
 | `-maxtime-job <sek>` | Maximale Laufzeit pro Job (nützlich mit `-recursion`) | `-maxtime-job 60` |
 | `-timeout <sek>` | HTTP-Request-Timeout (Standard: 10) | `-timeout 5` |
 
-### Proxy & SSL
+### ==Proxy & SSL==
 
 | Flag | Beschreibung | Beispiel |
 |------|-------------|---------|
 | `-x <proxy>` | HTTP-Proxy (z.B. Burp Suite) | `-x http://127.0.0.1:8080` |
 | `-k` | SSL-Zertifikatsprüfung deaktivieren (self-signed certs) | `-k` |
-| `-replay-proxy <proxy>` | Nur Treffer über diesen Proxy weiterleiten – nützlich wenn man nicht den vollen Traffic durch Burp leiten will, sondern nur interessante Responses | `-replay-proxy http://127.0.0.1:8080` |
+| `-replay-proxy <proxy>` | Nur Treffer über diesen Proxy leiten – ffuf läuft schnell, Burp sieht nur interessante Responses | `-replay-proxy http://127.0.0.1:8080` |
 
 ---
 
 ## Praxisbeispiele
 
-### Directory & File Enumeration
+### ==Directory & File Enumeration==
 
 ```bash
 # Verzeichnisse fuzzen
@@ -106,66 +115,54 @@ ffuf -w /usr/share/seclists/Discovery/Web-Content/raft-large-words.txt \
 ffuf -w /usr/share/seclists/Discovery/Web-Content/common.txt \
      -u http://target.com/FUZZ \
      -recursion -recursion-depth 2
-
-# Nur 200er anzeigen, sauber und gefärbt
-ffuf -w wordlist.txt -u http://target.com/FUZZ -mc 200 -c
 ```
 
-### Subdomain / VHost Enumeration
+### ==Subdomain / VHost Enumeration==
 
 ```bash
 # Subdomain-Fuzzing via DNS
 ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt \
-     -u http://FUZZ.target.com \
-     -mc 200
+     -u http://FUZZ.target.com -mc 200
 
 # VHost-Enumeration via Host-Header
-# Zuerst Standardgröße ermitteln, dann filtern:
 ffuf -w /usr/share/seclists/Discovery/DNS/namelist.txt \
      -H "Host: FUZZ.target.com" \
      -u http://TARGET_IP \
      -fs 2395    # Standardgröße der Default-Response ausschließen
 ```
 
-> Beim VHost-Fuzzing immer `-fs` mit der Größe der Standardantwort verwenden, sonst zeigt ffuf für jede Subdomain denselben Treffer. Standardgröße einmalig ohne Filter laufen lassen und ablesen.
+> [!tip] VHost-Fuzzing: immer `-fs` setzen
+> Ohne `-fs` mit der Größe der Standardantwort zeigt ffuf für jede Subdomain denselben Treffer. Erst einmal ohne Filter laufen lassen, Größe ablesen, dann filtern.
 
-### GET-Parameter Enumeration
+### ==GET-Parameter Enumeration==
 
 ```bash
 # Parameter-Namen finden
 ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt \
      -u "http://target.com/page.php?FUZZ=test" \
-     -fs 4242    # Standardgröße der Fehlantwort filtern
+     -fs 4242
 
 # Parameterwerte fuzzen (bekannter Parameter)
-ffuf -w values.txt \
-     -u "http://target.com/page.php?id=FUZZ" \
-     -fc 401
+ffuf -w values.txt -u "http://target.com/page.php?id=FUZZ" -fc 401
 ```
 
-### Backup-Dateien & Extension-Fuzzing
+### ==IDOR – ID-Enumeration==
 
 ```bash
-# Bekannte Datei – mögliche Backup-Endungen testen
-echo -e "bak\nold\ntmp\nbackup\n~\nswp\ncopy" > backup_ext.txt
-ffuf -w backup_ext.txt -u http://target.com/config.php.FUZZ -mc 200
+# Zahlenliste erzeugen
+seq 1 1000 > ids.txt
 
-# Extension einer bekannten Datei fuzzen
-ffuf -w backup_ext.txt -u http://target.com/index.FUZZ -mc 200
+# GET-Parameter mit IDs fuzzen
+ffuf -w ids.txt \
+     -u "http://target.com/api/v1/customer?id=FUZZ" \
+     -H "Cookie: session=YOUR_SESSION" \
+     -mc 200 -c
 ```
 
-### HTTP-Methoden fuzzen
+### ==POST-Daten fuzzen==
 
 ```bash
-# Welche Methoden akzeptiert ein Endpunkt?
-echo -e "GET\nPOST\nPUT\nDELETE\nPATCH\nHEAD\nOPTIONS\nTRACE" > methods.txt
-ffuf -w methods.txt -u http://target.com/api/users -X FUZZ -mc 200,201,204,405
-```
-
-### POST-Daten fuzzen
-
-```bash
-# Login-Formular (Passwort fuzzen)
+# Login-Formular
 ffuf -w /usr/share/seclists/Passwords/Common-Credentials/10k-most-common.txt \
      -u http://target.com/login \
      -X POST \
@@ -173,7 +170,7 @@ ffuf -w /usr/share/seclists/Passwords/Common-Credentials/10k-most-common.txt \
      -d "username=admin&password=FUZZ" \
      -fc 401 -c
 
-# JSON-POST fuzzen
+# JSON-POST
 ffuf -w usernames.txt \
      -u http://target.com/api/user \
      -X POST \
@@ -182,44 +179,72 @@ ffuf -w usernames.txt \
      -mr "welcome"
 ```
 
-### IDOR – ID-Enumeration
+### ==Multi-Wordlist Fuzzing==
 
 ```bash
-# Zahlenliste für sequentielle IDs erzeugen
-seq 1 1000 > ids.txt
+# Clusterbomb: alle Kombinationen
+ffuf -w users.txt:USER -w passwords.txt:PASS \
+     -u http://target.com/login -X POST \
+     -d "user=USER&pass=PASS" -fc 401
 
-# GET-Parameter mit IDs fuzzen
-ffuf -w ids.txt \
-     -u "http://target.com/api/v1/customer?id=FUZZ" \
-     -H "Cookie: session=YOUR_SESSION" \
-     -mc 200 -c
-
-# POST mit ID fuzzen
-ffuf -w ids.txt \
-     -u http://target.com/profile \
-     -X POST \
-     -H "Content-Type: application/x-www-form-urlencoded" \
-     -d "id=FUZZ" \
-     -mc 200
+# Pitchfork: synchron (Zeile 1+1, 2+2, ...)
+ffuf -w users.txt:USER -w passwords.txt:PASS \
+     -u http://target.com/login -X POST \
+     -d "user=USER&pass=PASS" -mode pitchfork -fc 401
 ```
 
-### Multi-Wordlist Fuzzing
+### ==Backup-Dateien & Extension-Fuzzing==
 
 ```bash
-# Clusterbomb: alle Kombinationen (Standard)
-ffuf -w users.txt:USER -w passwords.txt:PASS \
-     -u http://target.com/login \
-     -X POST \
-     -d "user=USER&pass=PASS" \
-     -fc 401
+echo -e "bak\nold\ntmp\nbackup\n~\nswp\ncopy" > backup_ext.txt
+ffuf -w backup_ext.txt -u http://target.com/config.php.FUZZ -mc 200
+```
 
-# Pitchfork: synchron (Zeile 1 aus Liste A + Zeile 1 aus Liste B)
-ffuf -w users.txt:USER -w passwords.txt:PASS \
-     -u http://target.com/login \
-     -X POST \
-     -d "user=USER&pass=PASS" \
-     -mode pitchfork \
-     -fc 401
+### ==HTTP-Methoden fuzzen==
+
+```bash
+echo -e "GET\nPOST\nPUT\nDELETE\nPATCH\nHEAD\nOPTIONS\nTRACE" > methods.txt
+ffuf -w methods.txt -u http://target.com/api/users -X FUZZ -mc 200,201,204,405
+```
+
+---
+
+## Typische Filter-Strategie
+
+> [!info] Workflow: Rauschen reduzieren
+> 1. Erst ohne Filter laufen lassen und die Standardantwort-Größe ablesen
+> 2. Diese Größe mit `-fs <n>` ausfiltern
+> 3. Alternativ `-ac` (Auto-Calibration) verwenden
+> 4. Bekannte Fehlercodes mit `-fc 404,403` zusätzlich ausblenden
+>
+> ```bash
+> # Schritt 1: Standardgröße ablesen
+> ffuf -w namelist.txt -H "Host: FUZZ.target.com" -u http://TARGET -mc all
+> # Schritt 2: Standardgröße filtern
+> ffuf -w namelist.txt -H "Host: FUZZ.target.com" -u http://TARGET -fs 2395
+> ```
+
+---
+
+## Stealth & Burp Integration
+
+```bash
+# Langsam und unauffällig
+ffuf -w wordlist.txt -u http://target.com/FUZZ -t 5 -rate 2 -p 0.5
+
+# User-Agent anpassen
+ffuf -w wordlist.txt -u http://target.com/FUZZ \
+     -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+
+# Vollständig durch Burp leiten
+ffuf -w wordlist.txt -u http://target.com/FUZZ -x http://127.0.0.1:8080
+
+# Nur Treffer durch Burp leiten (effizienter)
+ffuf -w wordlist.txt -u http://target.com/FUZZ \
+     -fc 404 -replay-proxy http://127.0.0.1:8080
+
+# HTTPS mit self-signed Zertifikat
+ffuf -w wordlist.txt -u https://target.com/FUZZ -k
 ```
 
 ---
@@ -236,77 +261,15 @@ ffuf -w users.txt:USER -w passwords.txt:PASS \
 | Passwörter | `/usr/share/seclists/Passwords/Common-Credentials/10k-most-common.txt` |
 | Passwörter (groß) | `/usr/share/wordlists/rockyou.txt` |
 
-SecLists installieren: `sudo apt install seclists` (Kali) oder von [GitHub](https://github.com/danielmiessler/SecLists).
-
----
-
-## Typische Filter-Strategie
-
-Rauschen reduzieren ist der wichtigste Schritt – ohne Filter liefert ffuf bei großen Wordlists tausende bedeutungslose Treffer.
-
-1. Erst ohne Filter laufen lassen und die Standardantwort-Größe ablesen
-2. Diese Größe mit `-fs <n>` ausfiltern
-3. Alternativ `-ac` (Auto-Calibration) verwenden
-4. Bekannte Fehlercodes mit `-fc 404,403` ausblenden wenn nötig
-
-```bash
-# Workflow-Beispiel: VHost-Enumeration
-# Schritt 1: Standardgröße ablesen (z.B. 2395 Bytes bei allen Antworten)
-ffuf -w namelist.txt -H "Host: FUZZ.target.com" -u http://TARGET -mc all
-
-# Schritt 2: Standardgröße filtern
-ffuf -w namelist.txt -H "Host: FUZZ.target.com" -u http://TARGET -fs 2395
-```
-
----
-
-## Stealth & Proxy
-
-ffuf ist standardmäßig sehr laut (40 Threads). Für weniger Auffälligkeit:
-
-```bash
-# Langsam und unauffällig
-ffuf -w wordlist.txt -u http://target.com/FUZZ -t 5 -rate 2 -p 0.5
-
-# Mit zufälligem Delay
-ffuf -w wordlist.txt -u http://target.com/FUZZ -p 0.1-2.0
-
-# User-Agent anpassen (Browser imitieren)
-ffuf -w wordlist.txt -u http://target.com/FUZZ \
-     -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-```
-
-### Burp Suite Integration
-
-Zwei Workflows:
-
-**Vollständig durch Burp leiten** – alle Requests sichtbar im Proxy-Tab:
-```bash
-ffuf -w wordlist.txt -u http://target.com/FUZZ -x http://127.0.0.1:8080
-```
-
-**Nur Treffer durch Burp leiten** (`-replay-proxy`) – ffuf läuft schnell, nur interessante Responses werden zur manuellen Analyse an Burp weitergeleitet:
-```bash
-ffuf -w wordlist.txt -u http://target.com/FUZZ \
-     -fc 404 \
-     -replay-proxy http://127.0.0.1:8080
-```
-
-Der zweite Ansatz ist effizienter: ffuf arbeitet mit voller Geschwindigkeit, Burp sieht nur die relevanten Treffer.
-
-### HTTPS mit self-signed Zertifikat
-
-```bash
-ffuf -w wordlist.txt -u https://target.com/FUZZ -k
-```
+SecLists installieren: `sudo apt install seclists`
 
 ---
 
 ## Bezug zu anderen Themen
 
-- [[2026-02-12-idor]] – IDOR-Enumeration: ffuf zur Automatisierung der API-ID-Iteration (`?id=FUZZ`) einsetzen, was im IDOR-Raum noch manuell über den Browser gemacht wurde
-- [[2026-03-20-h4cked]] – Verzeichnissuche auf dem FTP-Webroot als möglicher ffuf-Anwendungsfall nach initialem Zugang
-- [[2026-02-23-infinity-shell]] – Webshell-Suche: ffuf hätte `images.php` als anomale Datei im `/img/`-Verzeichnis über File-Fuzzing mit `-e .php` finden können
+- [[2026-02-12-idor]] – IDOR-Enumeration: ffuf zur Automatisierung der API-ID-Iteration (`?id=FUZZ`)
+- [[2026-03-19-h4cked]] – Verzeichnissuche auf dem FTP-Webroot als möglicher ffuf-Anwendungsfall
+- [[2026-02-23-infinity-shell]] – Webshell-Suche: ffuf hätte `images.php` über `-e .php` finden können
 
 ---
 
@@ -316,4 +279,3 @@ ffuf -w wordlist.txt -u https://target.com/FUZZ -k
 - [ffuf Wiki (offizielle Doku)](https://github.com/ffuf/ffuf/wiki)
 - [ffuf.me – interaktive Übungsplattform](http://ffuf.me)
 - [SecLists](https://github.com/danielmiessler/SecLists)
-- [Everything you need to know about FFUF – codingo](https://codingo.io/tools/ffuf/bounty/2020/09/17/everything-you-need-to-know-about-ffuf.html)
