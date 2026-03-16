@@ -29,18 +29,18 @@ grep [options] 'pattern' file(s)
 
 ### ==Pattern & Mode==
 
-| Flag | Long Form | Description | Example |
-|------|-----------|-------------|---------|
-| `-E` | `--extended-regexp` | Extended regex (ERE) — enables `+`, `?`, `\|`, `{}` without escaping | `grep -E 'fail\|error'` |
-| `-P` | `--perl-regexp` | PCRE — enables lookahead, lookbehind, `\d`, `\s`, `\w` etc. | `grep -P '\d{1,3}\.\d{1,3}'` |
-| `-F` | `--fixed-strings` | Treat pattern as literal string (no regex) — faster for exact matches | `grep -F '192.168.1.1'` |
-| `-G` | `--basic-regexp` | BRE — default mode (requires `\+`, `\?`, `\|`) | default |
-| `-e` | `--regexp=PATTERN` | Specify pattern explicitly; allows multiple `-e` for OR | `grep -e 'error' -e 'fail'` |
-| `-f` | `--file=FILE` | Read patterns from file (one per line) | `grep -f patterns.txt log` |
-| `-i` | `--ignore-case` | Case-insensitive matching | `grep -i 'error'` |
-| `-v` | `--invert-match` | Show lines that do NOT match | `grep -v 'debug'` |
-| `-w` | `--word-regexp` | Match whole words only | `grep -w 'fail'` |
-| `-x` | `--line-regexp` | Match whole lines only | `grep -x '404'` |
+| Flag | Long Form           | Description                                                           | Example                      |
+| ---- | ------------------- | --------------------------------------------------------------------- | ---------------------------- |
+| `-E` | `--extended-regexp` | Extended regex (ERE) — enables `+`, `?`, `\|`, `{}` without escaping  | `grep -E 'fail\|error'`      |
+| `-P` | `--perl-regexp`     | PCRE — enables lookahead, lookbehind, `\d`, `\s`, `\w` etc.           | `grep -P '\d{1,3}\.\d{1,3}'` |
+| `-F` | `--fixed-strings`   | Treat pattern as literal string (no regex) — faster for exact matches | `grep -F '192.168.1.1'`      |
+| `-G` | `--basic-regexp`    | BRE — default mode (requires `\+`, `\?`, `\|`)                        | default                      |
+| `-e` | `--regexp=PATTERN`  | Specify pattern explicitly; allows multiple `-e` for OR               | `grep -e 'error' -e 'fail'`  |
+| `-f` | `--file=FILE`       | Read patterns from file (one per line)                                | `grep -f patterns.txt log`   |
+| `-i` | `--ignore-case`     | Case-insensitive matching                                             | `grep -i 'error'`            |
+| `-v` | `--invert-match`    | Show lines that do NOT match                                          | `grep -v 'debug'`            |
+| `-w` | `--word-regexp`     | Match whole words only                                                | `grep -w 'fail'`             |
+| `-x` | `--line-regexp`     | Match whole lines only                                                | `grep -x '404'`              |
 
 ### ==Output Control==
 
@@ -101,15 +101,15 @@ grep [options] 'pattern' file(s)
 
 ### ==Quantifiers==
 
-| Pattern | Meaning | Example match |
-|---------|---------|---------------|
-| `.` | Any single character (except newline) | `f.o` → foo, f1o, f-o |
-| `*` | 0 or more of previous | `fo*` → f, fo, foo, fooo |
-| `+` | 1 or more of previous (ERE/PCRE) | `fo+` → fo, foo (not f) |
-| `?` | 0 or 1 of previous (optional) | `colou?r` → color, colour |
-| `{n}` | Exactly n times | `\d{3}` → 123 |
-| `{n,}` | n or more times | `\d{2,}` → 12, 123, 1234 |
-| `{n,m}` | Between n and m times | `\d{2,4}` → 12, 123, 1234 |
+| Pattern | Meaning                               | Example match             |
+| ------- | ------------------------------------- | ------------------------- |
+| `.`     | Any single character (except newline) | `f.o` → foo, f1o, f-o     |
+| `*`     | 0 or more of previous                 | `fo*` → f, fo, foo, fooo  |
+| `+`     | 1 or more of previous (ERE/PCRE)      | `fo+` → fo, foo (not f)   |
+| `?`     | 0 or 1 of previous (optional)         | `colou?r` → color, colour |
+| `{n}`   | Exactly n times                       | `\d{3}` → 123             |
+| `{n,}`  | n or more times                       | `\d{2,}` → 12, 123, 1234  |
+| `{n,m}` | Between n and m times                 | `\d{2,4}` → 12, 123, 1234 |
 
 ### ==Character Classes==
 

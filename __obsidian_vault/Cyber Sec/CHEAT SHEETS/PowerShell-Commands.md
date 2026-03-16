@@ -418,6 +418,208 @@ Get-CimInstance -ClassName Win32_NetworkAdapterConfiguration | Where-Object { $_
 
 ---
 
+## ==Filtering & Pipeline==
+
+Die PowerShell-Pipeline übergibt Objekte zwischen Cmdlets — nicht Text wie in Bash. Das ermöglicht direktes Filtern auf Eigenschaften ohne String-Parsing.
+
+### ==Where-Object==
+
+Filtert Objekte aus der Pipeline anhand einer Bedingung. Alias: `?` oder `where`.
+
+```powershell
+# Grundsyntax (Scriptblock)
+Get-Service | Where-Object { $_.Status -eq "Running" }
+
+# Kurzform (vereinfachte Syntax, nur eine Bedingung)
+Get-Service | Where-Object Status -eq "Running"
+
+# Vergleichsoperatoren
+# -eq   gleich           -ne   ungleich
+# -gt   größer           -lt   kleiner
+# -ge   größer gleich    -le   kleiner gleich
+# -match Regex           -notmatch Regex
+# -like  Wildcard        -notlike  Wildcard
+# -contains enthält      -in  Wert ist in Array
+
+# Mehrere Bedingungen (AND)
+Get-Process | Where-Object { $_.CPU -gt 10 -and $_.Name -ne "Idle" }
+
+# Mehrere Bedingungen (OR)
+Get-Service | Where-Object { $_.Status -eq "Stopped" -or $_.StartType -eq "Disabled" }
+
+# Regex-Match auf String-Eigenschaft
+Get-Process | Where-Object { $_.Name -match "^sv" }        # beginnt mit "sv"
+Get-Process | Where-Object { $_.Name -notmatch "svchost" }
+
+# Wildcard (-like)
+Get-Service | Where-Object { $_.DisplayName -like "*Windows*" }
+
+# Null-Check
+Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -ne $null }
+
+# Eigenschaft existiert / ist gesetzt
+Get-ChildItem | Where-Object { $_.PSIsContainer -eq $false }  # nur Dateien, keine Ordner
+```
+
+> [!tip] `$_` ist das aktuelle Objekt in der Pipeline
+> In einem `Where-Object`-Scriptblock (und auch in `ForEach-Object`) steht `$_` für das Objekt, das gerade durch die Pipeline läuft. `$_.Name` greift auf die `Name`-Eigenschaft zu.
+
+### ==Select-Object==
+
+Wählt bestimmte Eigenschaften aus oder begrenzt die Anzahl der Ergebnisse. Alias: `select`.
+
+```powershell
+# Bestimmte Eigenschaften auswählen
+Get-Process | Select-Object Name, Id, CPU
+
+# Erste / letzte N Ergebnisse
+Get-Process | Select-Object -First 10
+Get-Process | Select-Object -Last 5
+
+# Duplikate entfernen
+Get-NetTCPConnection | Select-Object -Property RemoteAddress -Unique
+
+# Berechnete Eigenschaft (calculated property)
+Get-Process | Select-Object Name, Id,
+    @{Name="Mem(MB)"; Expression={[math]::Round($_.WorkingSet / 1MB, 1)}},
+    @{Name="CPU(s)";  Expression={[math]::Round($_.CPU, 2)}}
+
+# Alle Eigenschaften anzeigen (statt Standardansicht)
+Get-Service wuauserv | Select-Object *
+
+# Eigenschaft expandieren (zeigt Inhalt statt Typname)
+Get-ScheduledTask | Select-Object TaskName -ExpandProperty Actions
+```
+
+### ==Sort-Object==
+
+Sortiert die Pipeline-Ausgabe. Alias: `sort`.
+
+```powershell
+# Aufsteigend (Standard)
+Get-Process | Sort-Object CPU
+
+# Absteigend
+Get-Process | Sort-Object CPU -Descending
+
+# Nach mehreren Eigenschaften
+Get-ChildItem | Sort-Object Extension, Name
+
+# Top 10 nach CPU
+Get-Process | Sort-Object CPU -Descending | Select-Object -First 10 Name, Id, CPU
+
+# Alphabetisch nach Name, dann absteigend nach Größe
+Get-ChildItem C:\ | Sort-Object @{E="Name"; Ascending=$true}, @{E="Length"; Descending=$true}
+```
+
+### ==Group-Object==
+
+Gruppiert Ergebnisse nach einer Eigenschaft — nützlich zum Zählen und Zusammenfassen.
+
+```powershell
+# Prozesse nach Name gruppieren (wie uniq -c in Bash)
+Get-Process | Group-Object Name | Sort-Object Count -Descending
+
+# TCP-Verbindungen nach Status gruppieren
+Get-NetTCPConnection | Group-Object State | Sort-Object Count -Descending | Select-Object Name, Count
+
+# Event Log Einträge nach Source zählen
+Get-EventLog -LogName System -Newest 500 | Group-Object Source | Sort-Object Count -Descending | Select-Object -First 10 Name, Count
+
+# Dateien nach Extension gruppieren
+Get-ChildItem C:\Windows\System32 -File | Group-Object Extension | Sort-Object Count -Descending | Select-Object -First 10 Name, Count
+```
+
+### ==Measure-Object==
+
+Berechnet Summe, Durchschnitt, Min/Max oder zählt Objekte.
+
+```powershell
+# Anzahl laufender Dienste
+Get-Service | Where-Object Status -eq "Running" | Measure-Object
+
+# Summe und Durchschnitt (numerische Eigenschaft)
+Get-Process | Measure-Object CPU -Sum -Average -Maximum -Minimum
+
+# Gesamtgröße aller Dateien in einem Ordner (in MB)
+Get-ChildItem C:\Windows\System32 -File |
+    Measure-Object Length -Sum |
+    Select-Object @{N="Total(MB)"; E={[math]::Round($_.Sum / 1MB, 1)}}
+
+# Zeilen in einer Datei zählen (wie wc -l)
+Get-Content C:\log.txt | Measure-Object -Line
+```
+
+### ==ForEach-Object==
+
+Führt einen Scriptblock für jedes Objekt in der Pipeline aus. Alias: `%` oder `foreach`.
+
+```powershell
+# Grundsyntax
+Get-Process | ForEach-Object { Write-Host $_.Name }
+
+# Kurzform mit Alias
+Get-Service | % { "$($_.Name): $($_.Status)" }
+
+# Mehrere Schritte pro Objekt
+Get-ChildItem *.log | ForEach-Object {
+    $size = [math]::Round($_.Length / 1KB, 1)
+    Write-Host "$($_.Name) — $size KB"
+}
+
+# Mit Bedingung kombinieren
+Get-Process | ForEach-Object {
+    if ($_.CPU -gt 50) {
+        Write-Host "$($_.Name) verbraucht viel CPU: $([math]::Round($_.CPU,1))s" -ForegroundColor Red
+    }
+}
+
+# Alle Prozesse einer Liste stoppen
+@("notepad", "calc", "mspaint") | ForEach-Object {
+    Stop-Process -Name $_ -Force -ErrorAction SilentlyContinue
+}
+```
+
+> [!tip] `ForEach-Object` vs. `foreach`-Schleife
+> `ForEach-Object` arbeitet in der Pipeline — Objekte werden einzeln durchgeleitet, kein Array im Speicher. Die `foreach`-Schleife (`foreach ($x in $collection)`) lädt erst alle Objekte. Bei großen Datensätzen ist `ForEach-Object` speichereffizienter.
+
+### ==Pipeline-Kombinationen (Praxisbeispiele)==
+
+```powershell
+# Top 5 Prozesse nach RAM, mit berechneter Spalte
+Get-Process |
+    Where-Object { $_.WorkingSet -gt 50MB } |
+    Select-Object Name, Id, @{N="Mem(MB)"; E={[math]::Round($_.WorkingSet/1MB,1)}} |
+    Sort-Object "Mem(MB)" -Descending |
+    Select-Object -First 5
+
+# Alle .ps1-Dateien unter C:\Users, die "DownloadString" enthalten
+Get-ChildItem C:\Users -Recurse -Filter "*.ps1" -ErrorAction SilentlyContinue |
+    Select-String -Pattern "DownloadString|IEX|Invoke-Expression" |
+    Select-Object Path, LineNumber, Line
+
+# Offene Ports mit zugehörigem Prozessnamen
+Get-NetTCPConnection -State Listen |
+    Where-Object { $_.LocalAddress -ne "::1" } |
+    Select-Object LocalPort, OwningProcess,
+        @{N="Process"; E={(Get-Process -Id $_.OwningProcess -EA SilentlyContinue).Name}} |
+    Sort-Object LocalPort
+
+# Dienste, die nicht von Microsoft signiert sind (vereinfacht)
+Get-CimInstance Win32_Service |
+    Where-Object { $_.PathName -notmatch "system32|SysWOW64" -and $_.State -eq "Running" } |
+    Select-Object Name, PathName |
+    Sort-Object Name
+
+# Event Log: fehlgeschlagene Logins pro Stunde zählen
+Get-WinEvent -FilterHashtable @{LogName='Security'; Id=4625} -MaxEvents 1000 |
+    Group-Object { $_.TimeCreated.ToString("yyyy-MM-dd HH") } |
+    Sort-Object Name |
+    Select-Object Name, Count
+```
+
+---
+
 ## ==Output & Formatting==
 
 ```powershell
@@ -554,6 +756,7 @@ Get-AppLockerPolicy -Effective | Select-Xml -XPath "//FilePathRule" | Select-Obj
 
 - [[Linux Terminal Commands]] – Linux/Unix equivalent commands for IT support and security tasks
 - [[Windows Endpoint Monitoring]] – Core Windows Processes, Event Logs, Sysmon
+- [[Windows Event Logs]] – Get-WinEvent, FilterHashtable, XPath im Detail
 - [[ffuf Cheat Sheet]] – Web fuzzing tool
 - [[Snort]] – Network-level detection complementing host-based PowerShell analysis
 

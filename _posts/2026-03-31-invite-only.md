@@ -1,6 +1,6 @@
 ---
 title: TryHackMe — Invite Only
-date: 2026-03-17 00:00:00 +0100
+date: 2026-03-31 00:00:00 +0100
 categories:
   - Writeups
   - TryHackMe
@@ -11,7 +11,11 @@ published: true
 image:
   path: /assets/img/posts/invite-only/cover.png
   alt: Invite Only
-related_notes: ["[[OSINT]]", "[[Threat Intelligence]]", "[[AsyncRAT]]", "[[Malware Analysis]]"]
+related_notes:
+  - "[[OSINT]]"
+  - "[[Threat Intelligence]]"
+  - "[[AsyncRAT]]"
+  - "[[Malware Analysis]]"
 ---
 
 ## Overview
