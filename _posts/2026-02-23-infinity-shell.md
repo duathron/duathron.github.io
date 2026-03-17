@@ -21,6 +21,8 @@ related_notes: ["[[Forensics]]", "[[Web Shells]]", "[[Log Analysis]]", "[[Base64
 
 This room is a **blue team forensics challenge**: no exploitation, no privilege escalation. You're handed a compromised machine and asked to reconstruct what happened. The attack vector turns out to be a one-line PHP webshell planted inside a CMS image directory — executing system commands passed as Base64-encoded parameters, and leaving clear traces in the Apache access logs.
 
+<!--more-->
+
 ---
 
 ## Approach

@@ -27,6 +27,8 @@ A group of self-declared "black hat hackers" left behind a confidential case fil
 
 This is a short forensic challenge with a single question. No network scanning, no exploitation — just a PDF and the right tool to take it apart. Completed in 22 minutes including AttackBox boot time.
 
+<!--more-->
+
 ---
 
 ## Theory

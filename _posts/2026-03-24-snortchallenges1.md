@@ -25,6 +25,8 @@ related_notes: ["[[Snort]]"]
 
 Practical follow-up to the [Snort Room](https://tryhackme.com/room/snort) in the SOC Level 1 path. Instead of reading about concepts, this room is about writing actual rules and testing them against PCAP files. Eight tasks covering different scenarios — from basic ICMP rules through FTP analysis to Log4Shell exploitation traffic.
 
+<!--more-->
+
 ---
 
 ## Task 2 — Simple Rules
@@ -244,7 +246,7 @@ The Base64-encoded string from the payload can be decoded in CyberChef using **F
 
 **Double backslash for a literal backslash in content strings.** A single `\` in a Snort content string throws a `bad escape sequence` error. `\\IPC$` is the correct syntax.
 
-**Read more of the payload before guessing.** In Task 8, the visible part of the early packets was full of `%` characters, so I assumed percent-encoding was the answer. The actual encoding — Base64 — only appeared further down in the payload and was written out explicitly. 
+**Read more of the payload before guessing.** In Task 8, the visible part of the early packets was full of `%` characters, so I assumed percent-encoding was the answer. The actual encoding — Base64 — only appeared further down in the payload and was written out explicitly.
 
 ---
 

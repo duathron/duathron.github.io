@@ -31,6 +31,8 @@ An intruder has infiltrated the network and targeted the NFS server where backup
 
 This is a purely forensic challenge — no exploitation, no shells. It's a **Network Traffic Analysis (NTA)** exercise: the entire room is solved by analysing captured traffic in Wireshark, recovering exfiltrated data, and decoding the stolen secret.
 
+<!--more-->
+
 ---
 
 ## Theory

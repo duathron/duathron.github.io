@@ -31,6 +31,8 @@ You are an SOC analyst at Managed Server Provider TrySecureMe. An L1 analyst has
 
 This room is pure analysis — no exploitation, no shells. It simulates the kind of IOC investigation SOC analysts perform daily, combining file analysis with OSINT research to map out a malware campaign.
 
+<!--more-->
+
 ---
 
 ## Theory

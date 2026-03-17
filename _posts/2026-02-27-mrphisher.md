@@ -27,6 +27,8 @@ A suspicious email has arrived with a strange-looking attachment. The task: unco
 
 This room introduces the analysis of malicious Office macros. No network scanning, no exploitation — just a document, a macro, and some basic reverse engineering.
 
+<!--more-->
+
 ---
 
 ## Theory
@@ -187,7 +189,7 @@ TryHackMe rejected this fabricated flag. The actual answer is the literal XOR ou
 
 ## References
 
-- [Microsoft — Macro Malware](https://www.microsoft.com/en-us/security/blog/2021/12/09/a-closer-look-at-qakbots-latest-building-blocks-and-how-to-knock-them-down/)
+- [Microsoft — Macro Malware](https://www.microsoft.com/en-us/security/blog/2021/12/09/a-closer-look-at-qakbots-latest-building-blocks-and-how-to-snap-them-down/)
 - [OWASP — Phishing](https://owasp.org/www-community/attacks/Phishing)
 - [VirusTotal — File Analysis](https://www.virustotal.com/gui/file/51eab087b585482a1ea66a9f8623140557a217e01227622fb822b154c8edb86d/)
 - [XOR Cipher — Wikipedia](https://en.wikipedia.org/wiki/XOR_cipher)

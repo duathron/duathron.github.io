@@ -27,6 +27,8 @@ Where the previous Snort rooms used PCAP files, this one is different: the traff
 
 This is the first time I've used Snort against live traffic instead of a saved capture.
 
+<!--more-->
+
 ---
 
 ## Task 2 — Brute Force / SSH
