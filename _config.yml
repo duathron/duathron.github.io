@@ -152,6 +152,8 @@ pwa:
 
 paginate: 10
 
+excerpt_separator: "<!--more-->"
+
 future: false  # Standardwert, aber explizit setzen
 
 # The base URL of your site
