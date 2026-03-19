@@ -14,8 +14,6 @@ image:
 related_notes: ["[[Phishing]]", "[[VBA Macros]]", "[[XOR]]", "[[Malware Analysis]]"]
 ---
 
-## Overview
-
 A suspicious email has arrived with a strange-looking attachment. The task: uncover the flag hidden inside it. The attachment is a `.docm` file — a macro-enabled Word document — one of the most common delivery mechanisms for malware in phishing campaigns.
 
 This room introduces the analysis of malicious Office macros. No network scanning, no exploitation — just a document, a macro, and some basic reverse engineering.

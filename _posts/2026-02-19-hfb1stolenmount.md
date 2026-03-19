@@ -17,8 +17,6 @@ image:
   alt: "Hack From the Back 1: Stolen Mount"
 ---
 
-## Overview
-
 An intruder has infiltrated the network and targeted the NFS server where backup files are stored. A classified secret was accessed and stolen. The only evidence left behind is a packet capture (PCAP) file recorded during the incident. The mission: analyse the capture and discover the contents of the stolen data.
 
 This is a purely forensic challenge — no exploitation, no shells. It's a **Network Traffic Analysis (NTA)** exercise: the entire room is solved by analysing captured traffic in Wireshark, recovering exfiltrated data, and decoding the stolen secret.

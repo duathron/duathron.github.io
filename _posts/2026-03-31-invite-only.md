@@ -18,8 +18,6 @@ related_notes:
   - "[[Malware Analysis]]"
 ---
 
-## Overview
-
 You are an SOC analyst at Managed Server Provider TrySecureMe. An L1 analyst has flagged two suspicious indicators — an IP address and a SHA256 hash — and escalated them for deeper analysis. The task: investigate these indicators using the in-house threat intelligence tool TryDetectThis2.0, trace the attack chain, and extract actionable threat intelligence.
 
 This room is pure analysis — no exploitation, no shells. It simulates the kind of IOC investigation SOC analysts perform daily, combining file analysis with OSINT research to map out a malware campaign.

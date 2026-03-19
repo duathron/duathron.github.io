@@ -14,8 +14,6 @@ image:
 related_notes: ["[[Forensics]]", "[[PDF Analysis]]", "[[QR Code]]"]
 ---
 
-## Overview
-
 A group of self-declared "black hat hackers" left behind a confidential case file. Inside the PDF: a QR code — partially covered by a red triangle overlay. The mission: uncover the original QR code and read the flag.
 
 This is a short forensic challenge with a single question. No network scanning, no exploitation — just a PDF and the right tool to take it apart. Completed in 22 minutes including AttackBox boot time.

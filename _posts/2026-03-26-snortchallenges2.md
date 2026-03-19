@@ -14,8 +14,6 @@ image:
   alt: Snort Challenge - Live Attacks
 ---
 
-## Overview
-
 Where the previous Snort rooms used PCAP files, this one is different: the traffic is live. The task is to write a Snort rule, run it in IPS mode against traffic that's actively hitting the machine, and get Snort to drop the right packets. When it works, a `flag.txt` appears on the desktop.
 
 This is the first time I've used Snort against live traffic instead of a saved capture.
