@@ -8,7 +8,12 @@ tags:
   - snort-challenges-2
   - medium
 published: true
-related_notes: ["[[Snort]]", "[[IPS]]", "[[SSH]]", "[[Reverse Shell]]", "[[Metasploit]]"]
+related_notes:
+  - "[[Snort]]"
+  - "[[IPS]]"
+  - "[[SSH]]"
+  - "[[Reverse Shell]]"
+  - "[[Metasploit]]"
 image:
   path: /assets/img/posts/snort-challenges-2/cover.png
   alt: Snort Challenge - Live Attacks

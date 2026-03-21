@@ -11,7 +11,8 @@ published: true
 image:
   path: /assets/img/posts/snort-challenges-1/cover.png
   alt: Snort Challenge - The Basics
-related_notes: ["[[Snort]]"]
+related_notes:
+  - "[[Snort]]"
 ---
 
 Practical follow-up to the [Snort Room](https://tryhackme.com/room/snort) in the SOC Level 1 path. Instead of reading about concepts, this room is about writing actual rules and testing them against PCAP files. Eight tasks covering different scenarios — from basic ICMP rules through FTP analysis to Log4Shell exploitation traffic.
