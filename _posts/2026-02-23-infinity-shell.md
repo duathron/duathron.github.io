@@ -1,13 +1,25 @@
 ---
 title: "TryHackMe – Infinity Shell"
 date: 2026-02-23 00:00:00 +0100
-categories: [Writeups, TryHackMe]
-tags: [infinity-shell, easy, forensics, log-analysis, webshell, base64]
+categories:
+  - Writeups
+  - TryHackMe
+tags:
+  - infinity-shell
+  - easy
+  - forensics
+  - log-analysis
+  - webshell
+  - base64
 published: true
 image:
   path: /assets/img/posts/infinity-shell/cover.png
   alt: "Infinity Shell"
-related_notes: ["[[Forensics]]", "[[Web Shells]]", "[[Log Analysis]]", "[[Base64]]"]
+related_notes:
+  - "[[Forensics]]"
+  - "[[Web Shells]]"
+  - "[[Log Analysis]]"
+  - "[[Base64]]"
 ---
 
 This room is a **blue team forensics challenge**: no exploitation, no privilege escalation. You're handed a compromised machine and asked to reconstruct what happened. The attack vector turns out to be a one-line PHP webshell planted inside a CMS image directory — executing system commands passed as Base64-encoded parameters, and leaving clear traces in the Apache access logs.

@@ -11,7 +11,10 @@ published: true
 image:
   path: /assets/img/posts/confidential/cover.png
   alt: "Confidential"
-related_notes: ["[[Forensics]]", "[[PDF Analysis]]", "[[QR Code]]"]
+related_notes:
+  - "[[Forensics]]"
+  - "[[PDF Analysis]]"
+  - "[[QR Code]]"
 ---
 
 A group of self-declared "black hat hackers" left behind a confidential case file. Inside the PDF: a QR code — partially covered by a red triangle overlay. The mission: uncover the original QR code and read the flag.

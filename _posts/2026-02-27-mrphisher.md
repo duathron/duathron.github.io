@@ -11,7 +11,11 @@ published: true
 image:
   path: /assets/img/posts/mrphisher/cover.png
   alt: "Mr Phisher"
-related_notes: ["[[Phishing]]", "[[VBA Macros]]", "[[XOR]]", "[[Malware Analysis]]"]
+related_notes:
+  - "[[Phishing]]"
+  - "[[VBA Macros]]"
+  - "[[XOR]]"
+  - "[[Malware Analysis]]"
 ---
 
 A suspicious email has arrived with a strange-looking attachment. The task: uncover the flag hidden inside it. The attachment is a `.docm` file — a macro-enabled Word document — one of the most common delivery mechanisms for malware in phishing campaigns.
