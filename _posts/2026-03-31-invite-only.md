@@ -118,6 +118,18 @@ From there: **ClickFix** phishing lures users into executing malicious code, mul
 
 **Trusted platforms can become attack vectors.** Expired Discord invite links can be silently hijacked — a design flaw with real consequences, especially for younger users in gaming communities.
 
+### Defensive Takeaways
+
+This room is pure threat intelligence analysis, so the defensive angle sits at two levels: what could end users do, and what could a SOC or security team do with this kind of intelligence.
+
+**For end users: treat links as untrusted, regardless of source.** The attack works because users follow Discord invite links embedded in forum posts, official community pages, or game wikis without questioning them. A link that looks safe today may have been silently redirected to a malicious server. The practical habit: verify the destination of any invite link before joining, particularly if the server you land on looks different from what you expected. Hovering over a link to preview the URL costs nothing.
+
+**For organisations: block or monitor macro execution.** The initial payload delivery relies on ClickFix — a technique that tricks users into running malicious commands themselves, typically through a fake CAPTCHA or "verification" prompt. Security policies that restrict PowerShell execution in user sessions, combined with endpoint detection rules for unusual process spawning (e.g. a browser spawning `cmd.exe`), would flag or block this delivery mechanism.
+
+**For SOC teams: IOC feeds are not enough on their own.** The attack chain in this room — from hijacked Discord links to AsyncRAT to ChromeKatz — uses techniques that generate predictable indicators: C2 IPs, file hashes, JNDI-style callback patterns. But individual IOCs age out quickly. The Check Point report shows that understanding the full campaign context makes the IOCs more actionable: knowing the delivery method (ClickFix), the payload family (AsyncRAT + Skuld), and the target (crypto wallets, browser cookies) lets a SOC prioritise and tune detections beyond a simple hash blocklist.
+
+**Expired platform features are an attack surface.** Discord's vanity URL system allowed expired invite codes to be claimed by anyone. This is a product design issue, not a user error — and it's a useful reminder that any feature on a trusted platform that involves user-controlled identifiers (invite codes, usernames, redirect URLs) can potentially be abused. When evaluating third-party platforms for internal or community use, it's worth asking: what happens when a resource expires or is deleted?
+
 ---
 
 ## References

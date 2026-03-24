@@ -204,6 +204,16 @@ The early packets were full of `%` characters — I assumed percent-encoding. Wr
 
 **Read more of the payload before guessing.** Base64 only appeared further down in the Task 8 payload — committing to percent-encoding based on the first visible characters cost a wrong attempt.
 
+### Defensive Takeaways
+
+This room is focused on detection, so the "what would have prevented this?" question sits one layer above the Snort rules themselves. The two vulnerabilities covered — EternalBlue and Log4Shell — have very different prevention stories.
+
+**EternalBlue (MS17-010): patch, then segment.** Microsoft released MS17-010 in March 2017, over a month before WannaCry. Organisations that were hit had simply not patched. The first line of defence here is patch management — applying security updates promptly, especially for critical vulnerabilities. Beyond patching, network segmentation limits lateral movement: SMB (port 445) should not be reachable from untrusted network segments, and firewall rules should restrict it to hosts that actually need it.
+
+**Log4Shell (CVE-2021-44228): update the library, validate input.** The vulnerability exists in Log4j's JNDI lookup feature, which resolves attacker-controlled URLs from log messages. The immediate fix was updating to a patched version of Log4j. The deeper fix is input validation: user-controlled data that ends up in log messages should be sanitised before logging, which would have made the injection string harmless even on an unpatched system. Disabling JNDI lookups entirely (`log4j2.formatMsgNoLookups=true`) was the recommended workaround before the patch was available.
+
+**Snort as a detection layer, not a prevention layer.** Writing a Snort rule that catches EternalBlue or Log4Shell traffic is useful — it surfaces active exploitation attempts. But detection alone is not sufficient if the underlying vulnerability is present and unpatched. The rule catches the attack *happening*; patching prevents it from succeeding.
+
 ---
 
 ## References

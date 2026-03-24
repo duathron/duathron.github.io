@@ -148,6 +148,20 @@ Protocol: TCP, port: 4444, tool: Metasploit.
 
 **Wrong answers can still trigger the flag.** The flag appearing isn't confirmation that the right threat was identified.
 
+### Defensive Takeaways
+
+This room shows two attacks in progress against a live machine: an SSH brute force and an active reverse shell session. Both are detectable with Snort, but detection alone doesn't stop them — the more interesting question is what would have prevented them in the first place.
+
+**SSH brute force: key-based authentication removes the attack surface entirely.** The brute force works because the target accepts password-based SSH logins. With key-based authentication enabled and password authentication disabled in `sshd_config`, every attempt in the wordlist returns a rejection regardless of what password is tried — there is no credential to guess. This is one of the most impactful single-step hardening measures for any internet-facing SSH service.
+
+**Rate limiting and fail2ban as a second layer.** If password authentication must remain enabled for operational reasons, rate limiting login attempts significantly raises the cost of brute force. Tools like `fail2ban` automatically ban source IPs after a configurable number of failed attempts. In the room, Hydra ran through thousands of candidates in seconds; a lockout after five failures would have stopped the attack before it found the password.
+
+**Restrict SSH access by source IP where possible.** The attacker came from a specific IP. In environments where the set of legitimate SSH clients is known — a bastion host, a specific office network, a VPN range — firewall rules that allowlist those sources and drop everything else make brute force from unknown IPs impossible by design. This doesn't replace key-based auth but adds another layer.
+
+**Reverse shell on port 4444: egress filtering stops the callback.** A reverse shell works by having the compromised machine initiate a connection *outbound* to the attacker. If outbound traffic is filtered at the firewall — particularly to non-standard ports like 4444 — the connection never completes. Strict egress policies that allow only necessary outbound traffic (HTTP/HTTPS, DNS, and whatever the application specifically needs) would have blocked the Meterpreter callback even after the payload was executed.
+
+**Snort in IPS mode is a detection-and-block layer, not a substitute for hardening.** Dropping packets from a known attacker IP is reactive — it works after the attack has already been identified. The goal in a real environment is to combine IPS rules with the preventive measures above, so that the attack either never starts or is contained quickly if it does.
+
 ---
 
 ## References
