@@ -1,6 +1,6 @@
 ---
-title: "TryHackMe — PS Eclipse"
-date: YYYY-MM-DD 00:00:00 +0200
+title: TryHackMe — PS Eclipse
+date: 2026-06-01 00:00:00 +0200
 categories:
   - Writeups
   - TryHackMe
@@ -15,7 +15,7 @@ tags:
 published: true
 image:
   path: /assets/img/posts/ps_eclipse/cover.png
-  alt: "PS Eclipse"
+  alt: PS Eclipse
 related_notes:
   - "[[Splunk]]"
   - "[[SIEM]]"
