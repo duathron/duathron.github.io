@@ -66,8 +66,8 @@ analytics:
   goatcounter:
     id: # fill in your GoatCounter ID
   umami:
-    id: # fill in your Umami ID
-    domain: # fill in your Umami domain
+    id: <script defer src="https://cloud.umami.is/script.js" data-website-id="6829541f-c5d0-48bb-8071-ccd2a7e247d2"></script> # fill in your Umami ID
+    domain: cloud.umami.is # fill in your Umami domain
   matomo:
     id: # fill in your Matomo ID
     domain: # fill in your Matomo domain
