@@ -1,6 +1,6 @@
 ---
 title: TryHackMe — PS Eclipse
-date: 2026-06-01 00:00:00 +0200
+date: 2026-06-22 00:00:00 +0200
 categories:
   - Writeups
   - TryHackMe
@@ -24,7 +24,7 @@ related_notes:
 
 A customer contacts TryNotHackMe, an MSSP, concerned about Keegan's workstation. Some files have a strange extension — possible ransomware. The task: investigate what happened on May 16th, 2022 using Splunk, and reconstruct the full attack chain from initial download through encryption.
 
-This was the first room where I investigated a ransomware incident in Splunk, and also the first where I used my own tool `vex` as part of the investigation workflow.
+This was the first room where I investigated a ransomware incident in Splunk, and one where my own tool `vex` slotted into the investigation workflow for IOC triage.
 
 | Field | Details |
 |-------|---------|
@@ -122,7 +122,7 @@ Rather than checking each IP individually on VirusTotal, I exported all five to 
 vex triage -f eclipse_ips.txt -q
 ```
 
-Results: 4 of 5 IPs came back MALICIOUS. One was clean — 0/91 engines flagged it. That one was likely legitimate traffic from the same time window, not attacker infrastructure. Having the batch triage in one command rather than five separate VirusTotal lookups was noticeably faster. This was the first time I used vex as part of an actual room investigation rather than just testing it.
+Results: 4 of 5 IPs came back MALICIOUS. One was clean — 0/91 engines flagged it. That one was likely legitimate traffic from the same time window, not attacker infrastructure. Having the batch triage in one command rather than five separate VirusTotal lookups was noticeably faster. This was the first time I pointed vex at a batch of IOCs in a room rather than a single indicator, and the bulk lookup is where it really paid off.
 
 ---
 
