@@ -1,6 +1,6 @@
 ---
 title: TryHackMe — Friday Overtime
-date: 2026-06-03 00:00:00 +0200
+date: 2026-06-19 00:00:00 +0200
 categories:
   - Writeups
   - TryHackMe
