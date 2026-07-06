@@ -11,8 +11,10 @@ tags:
   - zircolite
   - ai-agents
   - evaluation
+published: true
 image:
   path: /assets/img/posts/sigmaforge/cover.png
+  alt: Sigmaforge — an honest backtest harness for detection rules, built by AI agents
 ---
 
 Same disclosure as my Shipwright post: I am not a programmer. I direct AI agents, give feedback, and decide what to accept or reject; the agents do the core build. Sigmaforge was built that way, end to end. And the most useful thing it produced was not the tool. It was a list of the ways the agents' own work was quietly wrong: results that looked right but were not. I cannot read a diff and spot a subtle bug, so I could not catch those myself. What caught them was an independent review agent, the Skeptic, whose only job is to distrust the work before I accept it.

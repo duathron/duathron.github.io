@@ -3,8 +3,10 @@ title: "Shipwright — a shared backbone for my security CLIs, built by AI agent
 date: 2026-06-29 09:00:00 +0200
 categories: [Projects, Python]
 tags: [python, devtools, ai-agents, supply-chain, prompt-injection, pypi, framework]
+published: true
 image:
   path: /assets/img/posts/shipwright/cover.png
+  alt: "Shipwright — a shared backbone for my security CLIs, built by AI agents"
 ---
 
 I should say this up front, because it shapes everything below: I am not a programmer. I direct AI agents and I decide whether to accept or reject what they produce. The three security CLIs I have written about here, `barb`, `vex` and `sift`, were all built that way, and so is Shipwright, from end to end: the agents write the code, the tests, the CI pipeline and the release tooling; my part is the direction, the decisions, and the final yes or no. Shipwright is what happened once those three tools started repeating themselves, and almost every part of building it was a concept I was meeting for the first time.
