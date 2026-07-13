@@ -1,13 +1,15 @@
 ---
 title: "The Skeptic loop — how a non-programmer gets output from AI agents he can trust"
-date: YYYY-MM-DD 09:00:00 +0200
+date: 2026-07-15 09:00:00 +0200
 categories: [Projects, AI]
 tags: [ai-agents, agent-orchestration, code-review, evaluation, detection-engineering]
+published: true
 image:
   path: /assets/img/posts/skeptic-loop/cover.png
+  alt: The Skeptic loop — how a non-programmer gets output from AI agents he can trust
 ---
 
-Same disclosure as my Shipwright and Sigmaforge posts: I am not a programmer. I direct AI agents, give feedback, and decide what to accept or reject; the agents do the core build. That sounds like it should make me powerless against bugs, and for a long time it did. I cannot read a diff and spot the subtle thing that is wrong. So how do I ship anything I am willing to put my name on?
+Same disclosure as my Shipwright and Sigmaforge posts: I am not a programmer. I direct AI agents, give feedback, and decide what to accept or reject; the agents do the core build. That sounds like it should make me powerless against bugs, and for a long time it did. I can read a diff and usually follow what changed, just not at a developer's depth, and in a few thousand lines the one subtle thing that is wrong slips right past me. So how do I ship anything I am willing to put my name on?
 
 The answer turned into a method I now use on every project, and it is the most useful thing I have learned in this whole career change. It is not a tool. It is a way of orchestrating agents so that nobody, including me, gets to mark their own homework. I call the second agent the Skeptic, and the thing that makes it work is that it runs in a loop.
 
@@ -17,7 +19,7 @@ The failure mode with AI agents is not that they write obvious garbage. It is th
 
 And some of it is silently wrong in a way that no amount of reading-it-over by the same agent will catch, because the agent that wrote it has the same blind spot when it reviews it. Self-review inherits the original mistake. You get a confident second opinion from the same source that was confident the first time.
 
-For me this is worse than for someone who can read code well, because the normal safety net (a human who glances at the diff and goes "wait, that denominator looks off") is not available to me. I would read the green tests and the clean table and accept it. That is the exact trap.
+For me this is worse than for someone who reads code at a developer's depth, because the normal safety net (a human who glances at the diff and goes "wait, that denominator looks off") is not reliably me. I would read the green tests and the clean table and accept it. That is the exact trap.
 
 ## What the Skeptic loop is
 
@@ -63,4 +65,4 @@ It is slower. A clean-on-first-try task now takes several passes, and most of th
 
 It is also not magic. The Skeptic is itself an agent and can be wrong, miss things, or flag a non-issue. It does not turn me into someone who can read code. What it does is move me from "I trust this agent" to "I trust this process," and for the one finding in Sigmaforge that mattered most, the 66 false positives on a single rule, I still read all 66 by hand and had that review checked too. The loop raises the floor. It does not remove the need to look.
 
-That is the honest version. The Skeptic loop is the closest thing I have to an answer for the question I started with: how does someone who cannot read a diff ship work he is willing to defend. Not by getting better at reading diffs. By never letting one agent be the last word.
+That is the honest version. The Skeptic loop is the closest thing I have to an answer for the question I started with: how does someone who cannot reliably catch the subtle bug in a large diff ship work he is willing to defend. Not by getting better at reading diffs. By never letting one agent be the last word.
