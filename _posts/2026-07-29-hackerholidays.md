@@ -85,6 +85,8 @@ Flag: `[redacted]`
 
 I need to be upfront about this one before anything else: I didn't solve this room on my own. AWS, Cognito, DynamoDB, IAM roles, none of it meant anything to me going in, this was my first real contact with any of it. What's below is me using Claude as an active tutor to get through it, not a self-solved writeup. I'm documenting it that way on purpose, because pretending otherwise would be dishonest about where I actually am.
 
+<img src="/assets/img/posts/hackerholidays/hackerholidays_19.png" width="700" alt="Claude's explanation of Cognito Identity Pools, IAM roles, and how over-permissioned temporary credentials get abused, which I followed step by step">
+
 The room is a "Byte Lotus Wellness" guest dashboard. Reading the page source in DevTools, `app.js` hands you the whole setup in its own comments: no login screen on purpose, every visitor gets free AWS guest credentials from a Cognito Identity Pool so the app can save wellness preferences without the friction of an account. The file even hardcodes the identity pool ID, the AWS region, and the DynamoDB table name right there in plain text.
 
 <img src="/assets/img/posts/hackerholidays/hackerholidays_14.png" width="700" alt="app.js in DevTools, hardcoding the Cognito Identity Pool ID, region, and DynamoDB table name">
@@ -110,8 +112,6 @@ That should not have worked. It returned every guest profile in the table, not j
 One of the entries in that scan wasn't a real guest at all, its notes field was a message left for whoever got this far, saying plainly that the guest role can read every profile, not just its own, followed by the flag.
 
 Flag: `[redacted]`
-
-<img src="/assets/img/posts/hackerholidays/hackerholidays_19.png" width="700" alt="Claude's explanation of Cognito Identity Pools, IAM roles, and how over-permissioned temporary credentials get abused, which I followed step by step">
 
 ## Lessons Learned
 
