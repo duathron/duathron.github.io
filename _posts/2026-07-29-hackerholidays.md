@@ -14,6 +14,10 @@ tags:
   - cognito
   - dynamodb
   - iam
+  - wireshark
+  - pcap
+  - xor
+  - cyberchef
   - ctf
 published: true
 image:
@@ -21,13 +25,13 @@ image:
   alt: "Welcome to The Byte Lotus — Hacker Holidays"
 ---
 
-**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release, so it'll keep growing rather than showing up finished. What's below is current as of the warm-up room and the first three released rooms.
+**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release, so it'll keep growing rather than showing up finished. What's below is current as of the warm-up room and the first four released rooms.
 
 | Field | Details |
 |-------|---------|
 | Platform | TryHackMe |
 | Event | Hacker Holidays — "Welcome to The Byte Lotus" |
-| Rooms covered so far | Warm-up + 3 released rooms |
+| Rooms covered so far | Warm-up + 4 released rooms |
 
 ## Warm-up — The Instagram Trail
 
@@ -113,6 +117,48 @@ One of the entries in that scan wasn't a real guest at all, its notes field was 
 
 Flag: `[redacted]`
 
+## Room 4 — Packed Light
+
+This room drops you a PCAP and nothing else. First move: Wireshark, Statistics → Protocol Hierarchy, just to get a feel for what's actually in the capture before digging anywhere specific. Two protocols stood out that I'd never worked with before, SSDP (32 packets, a discovery protocol for UPnP devices) and QUIC (179 packets, the newer transport protocol Google built on top of UDP). I looked both up briefly, then set them aside since neither turned out to matter for what came next.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_27.png" width="700" alt="Wireshark's Protocol Hierarchy statistics for the capture, showing SSDP and QUIC alongside the usual TCP/TLS/HTTP traffic">
+
+The actual lead came from File → Export Objects → HTTP. Sitting in that list, next to a wall of repeated HTML responses, was one file that didn't belong: `updates.py`.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_21.png" width="700" alt="Wireshark's HTTP object export list, with updates.py sitting among a wall of repeated HTML responses">
+
+Reading `updates.py`, it's a keylogger. Every keystroke goes through the same three steps: XOR it against a key (built by concatenating two half-strings in the code, a minor obfuscation trick, not a real defense), base64-encode the result, then send it to an external C2 URL as a plain HTTP GET, with the encoded byte riding along inside a cookie instead of the URL or body.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_28.png" width="700" alt="The actual updates.py source: the XOR key assembled from two string halves, and the cyclic XOR function keying each byte by its position modulo the key length">
+
+That last part, `key[i % len(key)]`, matters later. It means the key doesn't just get reused, it wraps around and restarts based on the position of the byte being encoded.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_20.png" width="700" alt="One of the exfiltration requests, an ordinary-looking GET carrying the encoded keystroke inside an HTTP cookie">
+
+There were 30 of these requests total. I filtered on the cookie name in Wireshark to confirm that, then used `tshark` to pull the cookie value out of all 30 packets at once and write them to a file, one base64 fragment per line:
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_22.png" width="700" alt="Filtering Wireshark down to the 30 requests carrying the cookie payload">
+<img src="/assets/img/posts/hackerholidays/hackerholidays_23.png" width="700" alt="tshark extracting all 30 base64 cookie fragments into a single file, one per line">
+
+My first attempt at decoding was to treat the whole file as one blob: strip the newlines, base64-decode the entire thing in one go, then XOR it with the key sitting in plain sight inside `updates.py`. That produced something that looked close, readable-ish fragments, but not a clean flag, and brute-forcing the key length in CyberChef against that same blob didn't get me any further either.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_24.png" width="700" alt="Decoding all 30 fragments concatenated together as one base64 blob produces garbled, almost-readable output">
+<img src="/assets/img/posts/hackerholidays/hackerholidays_25.png" width="700" alt="Brute-forcing the XOR key length against the concatenated blob gets close at one key length but never fully clean">
+
+Everything up to here I worked out on my own. This is also the one point in the room where I brought Claude in, close to the end, with the flag basically in reach and one specific problem in the way. Both things I asked about were probably googleable, I just knew asking would be faster, the same way I'd ask a mentor sitting next to me rather than search for twenty minutes.
+
+First question: where's the XOR going wrong. The answer came with a concrete demo: with a one-byte key, only `key[0]` ever gets used, so applying that single byte to every byte in a longer stretch of concatenated data only lines up correctly for the very first character, everything after that decodes to garbage, exactly the "close but not clean" pattern I was seeing. Each of the 30 exfiltrated snippets had been encoded independently, key restarting at position 0 every time, so treating all 30 concatenated together as one continuous stream broke that alignment more with every fragment after the first.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_29.png" width="700" alt="Claude's explanation of the cyclic XOR bug, with a worked demo showing why only the first character decodes correctly when the fragments are treated as one continuous stream">
+
+Second question: how do I actually fix it. Claude's first offer was a Python script that would just do the whole decode for me. I didn't want that, that would have handed me the room instead of the fix to one problem in it. So I asked for a nudge toward the right tool instead, and got pointed at CyberChef's `Fork` operation, which I'd never used before. Its own description in the tool was a one-to-one match for the problem: split the input on a delimiter and run every following operation on each resulting branch separately, so instead of one long base64 decode and one long XOR, each line gets decoded and XORed on its own, key restarting fresh every time.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_26.png" width="700" alt="CyberChef recipe: Fork, then From Base64, then XOR, run separately per line, producing the clean flag">
+
+Fork, then From Base64, then XOR with the key from the script, each of the 30 lines processed independently, and the flag came out clean.
+
+Flag: `[redacted]`
+
 ## Lessons Learned
 
 **Warm-up:** I went for the complicated answer before checking the obvious one. Steganography before actually reading the room's own OSINT tag. The lesson wasn't a technique, it was to stop and read what's already in front of me before reaching for something harder.
@@ -122,6 +168,8 @@ Flag: `[redacted]`
 **Room 2:** looking up the `wget` flags isn't the gap, that's just a normal search, nothing to feel bad about. Git is the actual gap. I got through this room with one looked-up command, `git checkout --`, without understanding what it was really doing to the repository. I need to sit down and go through a proper git course rather than keep patching this over room by room.
 
 **Room 3:** this is the room where I felt the widest gap of the event so far. I had zero prior contact with AWS, Cognito, DynamoDB, or IAM roles, and I got through it by having Claude explain the concepts to me step by step rather than working it out myself. I'm naming that plainly rather than dressing it up as my own discovery. What I'm actually taking from it: temporary, "free" cloud credentials are only as safe as the permissions attached to them, and an app that only ever asks for one row doesn't mean the role behind it is actually restricted to one row.
+
+**Room 4:** I did this one myself. Claude only came in near the end, with the flag basically in reach, for two specific questions: why the XOR wasn't lining up, and what tool to reach for once I knew why. Both were probably a search away, I just asked because it was faster, the same reason I'd lean over and ask a mentor sitting next to me instead of digging through search results. The actual technical lesson: a repeating XOR key restarts at the beginning of every independently encoded chunk, it doesn't keep counting across chunks just because you concatenated them afterward. Decode each piece on its own, not the joined-up whole.
 
 ## To Be Continued
 
