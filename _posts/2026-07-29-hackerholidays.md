@@ -22,6 +22,11 @@ tags:
   - reverse-shell
   - privilege-escalation
   - boot2root
+  - tesseract-ocr
+  - gravatar
+  - nosql-injection
+  - ssti
+  - nodejs
   - ctf
 published: true
 image:
@@ -29,13 +34,13 @@ image:
   alt: "Welcome to The Byte Lotus — Hacker Holidays"
 ---
 
-**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release, so it'll keep growing rather than showing up finished. What's below is current as of the warm-up room and the first five released rooms.
+**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release, so it'll keep growing rather than showing up finished. What's below is current as of the warm-up room and the first seven released rooms.
 
 | Field | Details |
 |-------|---------|
 | Platform | TryHackMe |
 | Event | Hacker Holidays — "Welcome to The Byte Lotus" |
-| Rooms covered so far | Warm-up + 5 released rooms |
+| Rooms covered so far | Warm-up + 7 released rooms |
 
 ## Warm-up — The Instagram Trail
 
@@ -225,6 +230,105 @@ Root flag: `[redacted]`
 
 **The detection side of this is closer to where I actually am.** Blue team is the direction I'm studying toward, so doing this room from the attacker's side, I kept half an eye on what each step would have looked like from the other end, in the logs. The "temporary" demo credential sitting in an HTML comment was already a problem before I touched the login form, comments ship to every visitor's browser, not just the dev team who wrote them. The `!!python/object` tag in my request body isn't normal input for a playlist field, that's the kind of thing I'd want a detection rule to catch on its own. A web server process suddenly opening its own outbound connection, or `/dev/tcp` showing up anywhere in a process's arguments, has no reason to happen during a legitimate playlist import. And the password sitting in `/proc/*/cmdline` is the same shape of problem I already ran into in Room 3, a secret that's fine right up until something can read it that shouldn't be able to.
 
+## Room 6 — Overheard at Breakfast
+
+A short one, easy OSINT, done in a few minutes.
+
+The room hands you screenshots of a chat between two Byte Lotus staff accounts, Ponzi and Lambo, downloaded and unpacked from an archive. Reading them by eye is fine, but I'm lazy about it, so I ran `tesseract` on the conversation screenshot instead of retyping anything myself.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_41.png" width="700" alt="The Discord-style conversation between Ponzi and Lambo, handed out as a screenshot">
+<img src="/assets/img/posts/hackerholidays/hackerholidays_42.png" width="700" alt="Running tesseract OCR on the conversation screenshot instead of transcribing it by hand">
+
+The OCR text was a little rough, but readable. Lambo drops an email address in the chat, `lambobytelotushotel@gmail.com`, which I searched first and got nothing back. The more useful line was a throwaway comment: Lambo used to use a free tool that let him upload a profile and link his other social accounts, and he remembered it started with a G.
+
+I searched that exact sentence from the conversation, word for word, and Google's own summary named the tool directly: Gravatar.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_43.png" width="700" alt="Searching the exact quoted sentence from the conversation, Google's AI overview identifies the tool as Gravatar">
+
+From there it was `site:gravatar.com byte lotus hotel`, restricting the search to that one site instead of the open web, and the first result was Lambo's actual profile.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_44.png" width="700" alt="site:gravatar.com byte lotus hotel turns up Lambo's profile directly">
+
+The profile itself hands over a base64 string labeled as a prize.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_45.png" width="700" alt="Lambo's Gravatar profile, bio text about email hashes, and a base64-encoded prize string">
+
+Decoded straight in the terminal, that string was the flag.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_46.png" width="700" alt="Decoding the base64 prize string in the terminal">
+
+Flag: `[redacted]`
+
+## Room 7 — Do Not Disturb, a Chain I Couldn't Have Written Myself
+
+**Disclaimer up front: I'm logging this room as learning, not as something I solved myself, I worked through it leaning on AI step by step.**
+
+I want to say this plainly before anything else: I did not solve this room. I did recon myself, port scan, checked the login form, found a hidden `/staff` path. Past that, every technique in this chain was completely new to me, and I worked through it leaning on Claude the entire way. This isn't about the room's raffle ticket, it's not something I was trying to claim credit for. It's that I couldn't write a single one of these commands myself yet, because I didn't know they existed yet. What I got out of it is now knowing NoSQL injection, SSTI, and Node's debugger exist as real attack surfaces, and that some Linux groups hand out root-equivalent access without ever touching `sudo`. That recognition is the actual point, not the flags.
+
+**Recon, mine.** An nmap scan turned up just two open ports, SSH and an Express/Node web server on 80.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_47.png" width="700" alt="nmap scan showing SSH and a Node.js Express server as the only two open ports">
+
+The site itself is a "Poolside" staff and guest portal for Byte Lotus, with a plain sign-in form.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_48.png" width="700" alt="The Byte Lotus Poolside sign-in page, asking for a staff or guest ID and a passphrase">
+
+Directory fuzzing on the site turned up a `/logout` endpoint and a `/staff` path that returns 403 on a direct request, blocked but clearly there.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_49.png" width="700" alt="ffuf turning up /logout and a 403-blocked /staff path">
+
+**The chain, four bugs deep.** The target runs a small Express app: that login form, the hidden `/staff` page, and a database that isn't a real database, `nedb`, an in-memory store that speaks Mongo-style query syntax. That detail turns out to matter for the first bug. Just guessing at a username and password gets a plain 401.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_50.png" width="700" alt="A guessed username and password rejected with a 401 invalid-credentials response">
+<img src="/assets/img/posts/hackerholidays/hackerholidays_51.png" width="700" alt="The same failed login captured in Burp, a normal username and password POST returning 401">
+
+The login form rejects a JSON-style NoSQL injection payload, because the request itself is sent as regular form data, not JSON, so the fix is writing the injection in bracket notation instead: `username[$ne]=guest&password[$ne]=null`. That `$ne` operator, "not equal," turns the password check into "match any user whose password isn't literally the string null," which every real account satisfies. Excluding the guest account by name that way lands a session as `attendant`, a staff account, without ever knowing a real password, which is by design here since the actual password is generated from random bytes and was never guessable in the first place.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_52.png" width="700" alt="The bracket-notation NoSQL injection payload in Burp Repeater, returning a 302 redirect to /staff with a fresh session cookie">
+
+With a staff session, `/staff` turns out to be a template editor, and it renders whatever you send it through EJS. Sending `<%= 7*7 %>` as the template and getting `49` back confirms it's not just displaying the text, it's executing it as a template, server-side template injection.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_53.png" width="700" alt="Sending the EJS expression 7*7 as the template field and getting 49 back, confirming server-side template injection">
+
+Node blocks a plain `require()` inside that execution context, but `process.mainModule.require(...)` gets around that block, so `process.mainModule.require('child_process').execSync('id')` runs a real shell command and returns its output straight into the page, `uid=996(poolside) gid=996(poolside) groups=996(poolside)`.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_54.png" width="700" alt="The same SSTI bug used to run id via process.mainModule.require, confirming real command execution as the poolside user">
+
+Turning that into an actual shell meant base64-wrapping a reverse-shell one-liner to survive the trip through the template field cleanly, then firing it at `/staff/preview` with `curl`.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_55.png" width="700" alt="base64-encoding a bash reverse-shell one-liner before sending it through the template injection">
+<img src="/assets/img/posts/hackerholidays/hackerholidays_56.png" width="700" alt="curl firing the encoded payload at /staff/preview, decoding and executing it server-side">
+
+A `nc` listener caught the connection as `poolside`, and the user flag was sitting in that account's home directory.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_57.png" width="700" alt="netcat catching the reverse shell as the poolside user">
+<img src="/assets/img/posts/hackerholidays/hackerholidays_58.png" width="700" alt="Reading user.txt from the poolside home directory">
+
+User flag: `[redacted]`
+
+Privilege escalation split into two separate problems. First, the process list showed another app running under a different user, `pipelinesvc`, started with a Node debugging flag, `--inspect=127.0.0.1:9229`, bound to localhost only, but a shell on the box already counts as local.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_59.png" width="700" alt="ps auxww showing a second Node process running as pipelinesvc with the --inspect debug flag, and ss confirming the debug port is listening">
+
+Talking to that debugger doesn't work through a normal browser dev-tools connection here. Querying its own JSON endpoint hands back a `webSocketDebuggerUrl`, but without the `ws` module installed there was nothing to speak that protocol with directly, so the actual connection went through Node's own `node inspect` client instead.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_60.png" width="700" alt="Querying the inspector's JSON endpoint and getting back its webSocketDebuggerUrl">
+
+Once connected, plain `require` isn't available in that evaluation context either, so the exact same trick from the SSTI bug, routing through `process.mainModule.require`, ran a shell command as `pipelinesvc` instead, `uid=995(pipelinesvc) gid=995(pipelinesvc) groups=995(pipelinesvc),6(disk)`. That last part is the second bug: this account sits in the `disk` group.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_61.png" width="700" alt="Connecting with node inspect, working around require being undefined, and confirming the pipelinesvc account belongs to the disk group, then resolving the root device with readlink">
+
+Membership in `disk` grants raw read and write access to block devices, which sidesteps every normal file permission entirely, because it's not reading a file through the filesystem's rules, it's reading the raw disk the filesystem sits on top of. The same debugger session resolved which device the root filesystem actually lived on with `readlink -f /dev/root`.
+
+Reading the flag off that raw device needed the same base64-wrapping trick as the reverse shell, this time around a disk-forensics tool, `debugfs`, that can read a specific file straight from a raw block device without mounting anything or needing a root shell at all.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_62.png" width="700" alt="base64-encoding a debugfs command to read root.txt directly off the raw disk device">
+<img src="/assets/img/posts/hackerholidays/hackerholidays_63.png" width="700" alt="Running the encoded debugfs command through the inspector session, root.txt coming back in the output">
+
+Root flag: `[redacted]`
+
+**What actually stuck with me, since defense is where I'm headed.** Before this room I wouldn't have known what any of these four things looked like from the other side. Now I do: a `$ne` or `$regex` operator inside a login body reads as a NoSQL injection attempt to me. A `<%=` tag or `process.mainModule.require` showing up in form data headed to a template-rendering endpoint reads the same way for SSTI (Server Side Template Injection). A process bound to a `--inspect` debugger port with something connecting to it locally is the kind of thing I'd want a detection rule watching for, quiet enough that it's easy to miss otherwise. And I want to start checking group membership the same way I'd check `sudo -l`, disk, video, docker, whatever it turns out to be, since it can hand out the same level of access without sudo ever being involved. Four patterns I didn't have in my head before this room, and do now.
+
 ## Lessons Learned
 
 **Warm-up:** I went for the complicated answer before checking the obvious one. Steganography before actually reading the room's own OSINT tag. The lesson wasn't a technique, it was to stop and read what's already in front of me before reaching for something harder.
@@ -238,6 +342,10 @@ Root flag: `[redacted]`
 **Room 4:** I did this one myself. Claude only came in near the end, with the flag basically in reach, for two specific questions: why the XOR wasn't lining up, and what tool to reach for once I knew why. Both were probably a search away, I just asked because it was faster, the same reason I'd lean over and ask a mentor sitting next to me instead of digging through search results. The actual technical lesson: a repeating XOR key restarts at the beginning of every independently encoded chunk, it doesn't keep counting across chunks just because you concatenated them afterward. Decode each piece on its own, not the joined-up whole.
 
 **Room 5:** general offensive Linux work is still new to me, so this one leaned on Claude for hints the whole way through, not for a solution handed to me. Two real takeaways. First, technical: check `ps aux` and `/proc/*/cmdline` early when nothing else on a box looks exploitable, a plaintext secret sitting in a process's own arguments is an easy thing to miss and an easy thing to leak. Second, and this one isn't really about the room: when a password fails and you're sure it's the right one, check for your own typo before you go looking for a more complicated explanation. I had the root password early and talked myself out of it.
+
+**Room 6:** no real struggle here, just a note on method. Searching the exact quoted sentence from the conversation, instead of guessing at keywords for what the tool might be, is what actually surfaced Gravatar. And once I knew the site, restricting the search to it with `site:` found Lambo's profile directly, instead of digging through open-web results for the same name.
+
+**Room 7:** the most AI-guided room of the event so far, and I'm not going to dress that up. Recon was mine, everything past that was Claude walking me through techniques I'd never touched: NoSQL injection, server-side template injection, Node's own debugger as a pivot point, disk-group access as a root-equivalent path. One technical thread ran through half of it: `process.mainModule.require` showed up as the fix twice, once for the template injection, once again for the debugger, the same one workaround to Node blocking a plain `require()` call. The bigger takeaway isn't a command, it's that I now recognize what all four of these look like from the defending side, which matters more to me than being able to reproduce the attack myself right now.
 
 ## To Be Continued
 
