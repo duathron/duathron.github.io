@@ -27,6 +27,10 @@ tags:
   - nosql-injection
   - ssti
   - nodejs
+  - node-inspector
+  - burp-suite
+  - race-condition
+  - toctou
   - ctf
 published: true
 image:
@@ -34,13 +38,13 @@ image:
   alt: "Welcome to The Byte Lotus — Hacker Holidays"
 ---
 
-**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release, so it'll keep growing rather than showing up finished. What's below is current as of the warm-up room and the first seven released rooms.
+**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release, so it'll keep growing rather than showing up finished. What's below is current as of the warm-up room and the first eight released rooms.
 
 | Field | Details |
 |-------|---------|
 | Platform | TryHackMe |
 | Event | Hacker Holidays — "Welcome to The Byte Lotus" |
-| Rooms covered so far | Warm-up + 7 released rooms |
+| Rooms covered so far | Warm-up + 8 released rooms |
 
 ## Warm-up — The Instagram Trail
 
@@ -329,6 +333,36 @@ Root flag: `[redacted]`
 
 **What actually stuck with me, since defense is where I'm headed.** Before this room I wouldn't have known what any of these four things looked like from the other side. Now I do: a `$ne` or `$regex` operator inside a login body reads as a NoSQL injection attempt to me. A `<%=` tag or `process.mainModule.require` showing up in form data headed to a template-rendering endpoint reads the same way for SSTI (Server Side Template Injection). A process bound to a `--inspect` debugger port with something connecting to it locally is the kind of thing I'd want a detection rule watching for, quiet enough that it's easy to miss otherwise. And I want to start checking group membership the same way I'd check `sudo -l`, disk, video, docker, whatever it turns out to be, since it can hand out the same level of access without sudo ever being involved. Four patterns I didn't have in my head before this room, and do now.
 
+## Room 8 — Towel on the Sunbed, an Idea I Almost Gave Up On
+
+This is the one room in the event so far where I actually started in the right place on my own. I'd done [a room built around race conditions](https://tryhackme.com/room/race-conditions-aoc2025-d7f0g3h6j9) before, so a race was my first real guess for what this room wanted. I tried it myself, first, before bringing Claude in at all.
+
+The app is a fake staking dashboard, Ponzi Portfolio: log in, claim 50 PONZI every 24 hours, and a vault that only opens once the balance crosses 150.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_64.png" width="700" alt="The vault endpoint refusing access, reporting a current balance of 50 against a required 150">
+
+My first attempt at the race fired only 5 requests at the claim endpoint at once. Not enough. The claim cooldown locked in immediately after, over 23 hours remaining, and the balance hadn't moved past one successful claim.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_65.png" width="700" alt="The claim endpoint locked out with a 429 and nearly a full day left on the cooldown, after the first, too-small race attempt">
+
+That failed attempt cost me real time, though not 24 hours of it, I wasn't about to sit around waiting out a cooldown I'd already blown. Registering a fresh account resets that cooldown, so every later attempt just ran against a new account instead of waiting out the old one. I second-guessed the race idea itself, though, and spent a long stretch with Claude going down every other lead the app offered: sending extra fields in the claim request to see if any of them changed the payout, swapping the request method, spoofing `X-Forwarded-For` to dodge the rate limit, trying an IDOR on a numeric ID parameter, sending a fake balance straight in at registration, fuzzing for a hidden transfer or price-update endpoint, even trying the same NoSQL `$ne` trick that worked back in Room 7. Every single one of them was already closed off. The app validated types, checked balances server-side, ignored extra fields, and the session cookie wasn't forgeable. Twenty-some dead ends later, checking the vault directly still gave the same refusal.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_66.png" width="700" alt="The vault still refused after a long stretch of testing every other lead, balance unchanged">
+
+The room's own hint was pointing at the race the whole time, I just hadn't taken it seriously enough after the first attempt fizzled: *"He's convinced the app owes him a spot in the Whale Vault. The app disagrees, politely, once every 24 hours. Somewhere between his request and the server's clock, there's a gap wide enough to walk a whale through."*
+
+Going back to the race was the actual fix, just with a real dose behind it this time, on a new account with a clean cooldown. The claim endpoint checks eligibility, credits the balance, and only then sets the cooldown, and those three steps aren't atomic, so a burst of requests can all pass the eligibility check before any of them have set the cooldown yet. In Burp, that meant duplicating the claim request into a group, this time around 30 copies instead of 5, and firing the whole group at once with Burp's parallel single-packet send instead of one at a time.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_67.png" width="700" alt="A group of roughly 30 duplicate claim requests fired in parallel, one of them coming back 200 OK with the balance jumped to 1150">
+
+Enough of those 30 landed inside the same gap that the balance jumped from 50 to 1150 in one burst, blowing straight past the 150 threshold, and the dashboard reflected it: Whale tier, vault open.
+
+<img src="/assets/img/posts/hackerholidays/hackerholidays_68.png" width="700" alt="The dashboard afterward, balance at 1550 PONZI and a Whale tier badge">
+
+Flag: `[redacted]`
+
+The lesson I actually want to keep from this one isn't the vulnerability class, I already knew races existed. It's that having the right idea on the first try doesn't mean much if the execution behind it is too weak to prove it, and that a failed test isn't always the idea being wrong, sometimes it's just underpowered. I nearly filed "race condition" away as a checked box that didn't pan out, instead of a hypothesis I'd tested badly.
+
 ## Lessons Learned
 
 **Warm-up:** I went for the complicated answer before checking the obvious one. Steganography before actually reading the room's own OSINT tag. The lesson wasn't a technique, it was to stop and read what's already in front of me before reaching for something harder.
@@ -346,6 +380,8 @@ Root flag: `[redacted]`
 **Room 6:** no real struggle here, just a note on method. Searching the exact quoted sentence from the conversation, instead of guessing at keywords for what the tool might be, is what actually surfaced Gravatar. And once I knew the site, restricting the search to it with `site:` found Lambo's profile directly, instead of digging through open-web results for the same name.
 
 **Room 7:** the most AI-guided room of the event so far, and I'm not going to dress that up. Recon was mine, everything past that was Claude walking me through techniques I'd never touched: NoSQL injection, server-side template injection, Node's own debugger as a pivot point, disk-group access as a root-equivalent path. One technical thread ran through half of it: `process.mainModule.require` showed up as the fix twice, once for the template injection, once again for the debugger, the same one workaround to Node blocking a plain `require()` call. The bigger takeaway isn't a command, it's that I now recognize what all four of these look like from the defending side, which matters more to me than being able to reproduce the attack myself right now.
+
+**Room 8:** different shape of mistake than the other rooms. This time I had the right instinct immediately, from a race-condition room I'd already done, and still nearly talked myself out of it because my first attempt at proving it was too weak to work. Five requests failed, so I spent a long stretch ruling out a whole list of other, already-hardened leads before circling back to the idea I'd started with. Getting the dose right, roughly 30 concurrent requests instead of 5, was what actually closed it. A failed test doesn't tell you the idea was wrong, only that this particular attempt at it was.
 
 ## To Be Continued
 
