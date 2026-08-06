@@ -38,7 +38,7 @@ image:
   alt: "Welcome to The Byte Lotus — Hacker Holidays"
 ---
 
-**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release, so it'll keep growing rather than showing up finished. What's below is current as of the warm-up room and the first eight released rooms.
+**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release. This post covers the warm-up room and the first eight released rooms; once a room count gets this long, further rooms continue in [Part 2](/posts/hackerholidays-2/) instead of stretching this post out further.
 
 | Field | Details |
 |-------|---------|
@@ -385,4 +385,4 @@ The lesson I actually want to keep from this one isn't the vulnerability class, 
 
 ## To Be Continued
 
-More rooms are still unlocking in this event. I'll keep adding to this post as they release.
+This post is getting long, so room 9 onward continues in [Part 2](/posts/hackerholidays-2/) instead of growing further here.
