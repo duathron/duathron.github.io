@@ -54,9 +54,9 @@ That confirmed the server actually extracts the archive somewhere on disk, and g
 
 The room's own name was the actual hint I'd been sitting on without registering it: Zip Slip, "slip" being the tell. I didn't know the term, so I asked Claude to walk me through what it actually was before touching anything.
 
-<details>
-<summary>What Zip Slip actually is, in plain terms</summary>
-<div markdown="1">
+<details style="border: 1px solid rgba(128,128,128,0.35); border-radius: 6px; padding: 0.75em 1em; margin: 1em 0;">
+<summary style="cursor: pointer; font-weight: 600;">What Zip Slip actually is, in plain terms</summary>
+<div markdown="1" style="margin-top: 0.75em; padding-top: 0.75em; border-top: 1px solid rgba(128,128,128,0.25);">
 
 A ZIP file is really just a list of entries, and each entry has a name, which is also the path it gets written to when someone extracts the archive. Nothing stops that name from being something like `../../../etc/whatever` instead of a normal filename. If the code doing the extracting doesn't check that the final write location is still inside the folder it's supposed to be, an entry like that walks itself out of the upload folder entirely and lands wherever its `../` sequence points, anywhere on disk the process has permission to write. It's not a bug in ZIP itself, it's a missing check in whatever code unpacks it. It's also not obscure or new, this exact class of bug hit several major libraries across multiple languages back in 2018 when it was first named and publicized.
 
