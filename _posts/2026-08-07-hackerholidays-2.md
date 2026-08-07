@@ -32,7 +32,7 @@ Still open. I couldn't get the room's cloud shell to start, so this one's on hol
 
 ## Room 10 — The Hollow Shell
 
-Three of the four stages in this room I did myself: finding the login credentials, testing the upload, and going from shell to flag. The one new piece, actually building a working exploit ZIP and placing the payload correctly, I did with Claude, both building the payload and having the underlying attack explained to me. I want to be honest about what that means and what it doesn't: having Claude build it once doesn't mean I could build it myself yet. I've seen it done and I understand the concept now. That's a real step, it's just not the same thing as being able to reproduce it cold.
+Three of the four stages in this room I did myself: finding the login credentials, testing the upload, and going from shell to flag. The one new piece was Zip Slip itself, a vulnerability class I'd never heard of before this room. I had Claude explain the underlying principle to me and build the actual exploit ZIP. I want to be honest about what that means and what it doesn't: having Claude build it once doesn't mean I could build it myself yet. I've seen it done and I understand the concept now. That's a real step, it's just not the same thing as being able to reproduce it cold.
 
 An nmap scan turned up SSH and a web app on port 5000, a "Byte Lotus Shoreline Display" staff sign-in page.
 
@@ -52,7 +52,16 @@ I tested that upload path with a harmless ZIP first, just a manifest and no real
 
 That confirmed the server actually extracts the archive somewhere on disk, and gave me a real path to reason about, rather than guessing blind.
 
-The room's own name was the actual hint I'd been sitting on without registering it: Zip Slip, a real vulnerability class, "slip" being the tell. The server's ZIP extractor doesn't check where an entry inside the archive is actually trying to write. A file inside the ZIP named something like `../../../hooks/callback.py` walks itself right out of the intended upload folder on extraction. `hooks/` turned out to be a sibling directory next to `shells/`, sitting in the app's own working directory alongside `app.py` and a `theme_worker.py` process, the automation-hooks worker the upload page mentioned, and the app treats anything dropped into it as a plugin, automatically loading and running any Python file placed there whenever the worker next runs. Write access to that one folder is remote code execution.
+The room's own name was the actual hint I'd been sitting on without registering it: Zip Slip, "slip" being the tell. I didn't know the term, so I asked Claude to walk me through what it actually was before touching anything.
+
+<details markdown="1">
+<summary>What Zip Slip actually is, in plain terms</summary>
+
+A ZIP file is really just a list of entries, and each entry has a name, which is also the path it gets written to when someone extracts the archive. Nothing stops that name from being something like `../../../etc/whatever` instead of a normal filename. If the code doing the extracting doesn't check that the final write location is still inside the folder it's supposed to be, an entry like that walks itself out of the upload folder entirely and lands wherever its `../` sequence points, anywhere on disk the process has permission to write. It's not a bug in ZIP itself, it's a missing check in whatever code unpacks it. It's also not obscure or new, this exact class of bug hit several major libraries across multiple languages back in 2018 when it was first named and publicized.
+
+</details>
+
+The server's ZIP extractor here doesn't check where an entry inside the archive is actually trying to write. A file inside the ZIP named something like `../../../hooks/callback.py` walks itself right out of the intended upload folder on extraction. `hooks/` turned out to be a sibling directory next to `shells/`, sitting in the app's own working directory alongside `app.py` and a `theme_worker.py` process, the automation-hooks worker the upload page mentioned, and the app treats anything dropped into it as a plugin, automatically loading and running any Python file placed there whenever the worker next runs. Write access to that one folder is remote code execution.
 
 Actually building the malicious ZIP is where the real technical trick lived, and where Claude actually did the building. A normal `zip` command or file-manager GUI silently strips `../` sequences back down to something safe when it writes the archive, so the traversal never survives packaging in the first place. The fix is building the archive by hand in Python instead, writing the manifest and the malicious entry directly into the zip file's internal structure:
 
