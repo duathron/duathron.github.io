@@ -7,6 +7,11 @@ categories:
 tags:
   - hacker-holidays
   - byte-lotus
+  - azure
+  - cloud-security
+  - sas-token
+  - key-vault
+  - service-principal
   - zip-slip
   - path-traversal
   - file-upload
@@ -24,11 +29,47 @@ image:
 |-------|---------|
 | Platform | TryHackMe |
 | Event | Hacker Holidays — "Welcome to The Byte Lotus" |
-| Rooms covered so far | Room 10 (room 9 still open, more below) |
+| Rooms covered so far | Room 9, Room 10 |
 
-## Room 9
+## Room 9 — Crypto Cabana
 
-Still open. I couldn't get the room's cloud shell to start, so this one's on hold until that's sorted. Will fill this in once it's actually solved.
+I had never touched cloud before this room, not Azure, not AWS, nothing. One thing that made it less intimidating than I expected: the Azure CLI feels structurally like a Linux terminal, commands, subcommands, flags, the shape of it was familiar even though every single command itself was new to me. I'll say upfront where the line sits: I found the leaked token myself and worked out that it was over-scoped myself. Everything past "here's the token, now what," every actual Azure CLI command that does something with it, I had Claude write. I know there's a whole CLI syntax for this, I just don't know it myself yet.
+
+The room drops you straight into a browser-based Azure Cloud Shell with `az` already available. The target is a "back up your seed phrase" site, and its page source leaks a storage account name, a container name, and a SAS token, all sitting in plain JavaScript.
+
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_06.png" width="700" alt="The CryptoCabana seed-phrase backup site">
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_07.png" width="700" alt="The page's source code, leaking the storage account name, container name, and a full SAS token in plain JavaScript">
+
+A SAS token is Azure's way of handing out scoped, temporary access to storage without a full login, and this one is genuinely just meant to let the page write one backup file. I decoded its URL-encoded parameters through CyberChef to read them cleanly, and they told a different story than "write one file": `ss=b` for blob service, `srt=sco` for service, container, and object level all at once, `sp=rl` for read and list, and an expiry set to the year 2099. The app only ever needs to write. This token can read and list the entire storage account, forever.
+
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_08.png" width="700" alt="CyberChef decoding the SAS token's URL-encoded parameters">
+
+Turning that observation into actual access is where I needed Claude the whole way, I had never run an `az storage` command before. Listing containers with the token turned up three: `$web`, `backups`, the one the app is meant to use, and `vault`, which had no reason to be reachable with this token at all. Listing and downloading the contents of `vault` came back with two files.
+
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_09.png" width="700" alt="Listing storage containers with the leaked token, finding an unexpected vault container, then listing and downloading its contents">
+
+One was a decoy seed phrase. The other was `backup-service-account.json`, and it was the actual jackpot: a full set of Azure service principal credentials, client ID, client secret, tenant ID, and the URI of a Key Vault, sitting in plain text, with a note on the file that read almost like a joke in hindsight: rotate this if it ever leaves the vault.
+
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_10.png" width="700" alt="The decoy seed phrase alongside backup-service-account.json, containing plaintext service principal credentials">
+
+A service principal is Azure's version of a machine account, an identity meant for an application rather than a person, and these credentials let you authenticate as that identity from anywhere. Again, I didn't know the login syntax, Claude wrote the command, and it logged in cleanly as that service principal.
+
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_11.png" width="700" alt="Logging in as the leaked service principal via the Azure CLI">
+
+From there, the Key Vault the credentials pointed at listed four secrets: three key shards and a master key. The three shards came back to me quickly.
+
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_12.png" width="700" alt="Listing the Key Vault's secrets: three key shards and a master key">
+
+The master key, though, came back Forbidden. This account genuinely wasn't allowed to read it, real least-privilege access control doing exactly what it's supposed to do, which meant the master key was never the intended path.
+
+This is the part I actually want to flag as my own realization, not something Claude pointed me toward: I noticed one of the three shards I did have access to had already been rotated, and rotating a secret in Key Vault doesn't delete the old value, it just adds a new version on top while the previous one stays in the vault's version history. That's the cloud cutting both ways in the same feature: version history is genuinely useful for recovering from a mistake, and it's just as useful for recovering a secret someone thought they'd already invalidated. Checking that shard's version history turned up two versions, created seconds apart, and reading the earlier one directly by its versioned ID gave back its actual value.
+
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_13.png" width="700" alt="Listing version history for one key shard, showing an old and a new version">
+<img src="/assets/img/posts/hackerholidays-2/hackerholidays-2_14.png" width="700" alt="Reading the value of the old, supposedly-rotated version directly by its full versioned ID">
+
+Three shards, stitched together, made the flag.
+
+Flag: `[redacted]`
 
 ## Room 10 — The Hollow Shell
 
@@ -96,6 +137,8 @@ Flag: `[redacted]`
 **What I'm keeping from this one, blue-team side:** an uploaded ZIP whose entries contain `../` is a traversal attempt on the extractor, not a formatting quirk. A new or changed file showing up in a directory the app treats as auto-loading code, plugins, hooks, whatever it's called, right after a file upload, is exactly the moment a file-integrity check should fire. And the actual fix on the defending side isn't complicated once you've seen the attack: every extracted path needs to be checked against the target directory before it's written, and nothing gets extracted anywhere near a directory the app will later execute code from.
 
 ## Lessons Learned
+
+**Room 9:** first time touching cloud at all, so the honest split matters here: I found the leaked token and worked out it was over-privileged on my own, but every actual Azure command, listing storage, downloading blobs, logging in as a service principal, querying the Key Vault, was new syntax I had Claude write, not something I could have typed myself. What's mine to keep is the pattern I actually recognized without help: rotating a secret is not the same as deleting it, and if the old version is still sitting in a vault's history, "we rotated it" doesn't mean the leak stopped mattering.
 
 **Room 10:** three of four stages here were mine, and the one that wasn't, crafting a Zip Slip payload from scratch, is now something I've watched happen and understood, not something I can do on my own yet. I'm keeping that distinction on purpose. Seeing a technique built once and being able to rebuild it are two different levels of knowing something, and blurring them together would make this writeup dishonest about where I actually am.
 
