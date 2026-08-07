@@ -18,7 +18,7 @@ image:
   alt: "Welcome to The Byte Lotus — Hacker Holidays, Part 2"
 ---
 
-**Work in progress, continued.** This is the second part of my [Hacker Holidays writeup](/posts/hackerholidays/). The first post covers the warm-up room plus the first eight released rooms; this one picks up from room 9 onward as they unlock. Same rules as part one: rooms I solved myself are written that way, rooms where I leaned on Claude say so plainly, and flags stay redacted.
+**Work in progress, continued.** This is the second part of my [Hacker Holidays writeup](/posts/hackerholidays/). The first post covers the warm-up room plus the first eight released rooms; this one picks up from room 9 onward as they unlock. Same rules as part one: rooms I solved myself are written that way, rooms where I leaned on Claude say so plainly, and flags stay redacted. 
 
 | Field | Details |
 |-------|---------|
