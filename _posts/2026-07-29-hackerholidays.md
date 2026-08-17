@@ -38,7 +38,7 @@ image:
   alt: "Welcome to The Byte Lotus — Hacker Holidays"
 ---
 
-**Work in progress.** This is TryHackMe's Hacker Holidays event, and rooms unlock over time. I'm writing this up room by room as they release. This post covers the warm-up room and the first eight released rooms; once a room count gets this long, further rooms continue in [Part 2](/posts/hackerholidays-2/) instead of stretching this post out further.
+This is TryHackMe's Hacker Holidays event, warm-up plus fourteen rooms total. This post covers the warm-up room and the first eight rooms; once a room count gets this long, the rest continues in [Part 2](/posts/hackerholidays-2/) instead of stretching this post out further.
 
 | Field | Details |
 |-------|---------|
@@ -383,6 +383,6 @@ The lesson I actually want to keep from this one isn't the vulnerability class, 
 
 **Room 8:** different shape of mistake than the other rooms. This time I had the right instinct immediately, from a race-condition room I'd already done, and still nearly talked myself out of it because my first attempt at proving it was too weak to work. Five requests failed, so I spent a long stretch ruling out a whole list of other, already-hardened leads before circling back to the idea I'd started with. Getting the dose right, roughly 30 concurrent requests instead of 5, was what actually closed it. A failed test doesn't tell you the idea was wrong, only that this particular attempt at it was.
 
-## To Be Continued
+## Continued in Part 2
 
-This post is getting long, so room 9 onward continues in [Part 2](/posts/hackerholidays-2/) instead of growing further here.
+Room 9 through the event's last room, 14, continue in [Part 2](/posts/hackerholidays-2/), including a look back at the whole event once it wrapped up.
