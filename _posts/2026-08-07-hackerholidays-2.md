@@ -29,6 +29,11 @@ tags:
   - prompt-injection
   - owasp-llm
   - ai-agent-security
+  - dpapi
+  - dfir
+  - kape
+  - impacket
+  - credential-theft
   - ctf
 published: true
 image:
@@ -36,13 +41,13 @@ image:
   alt: "Welcome to The Byte Lotus — Hacker Holidays, Part 2"
 ---
 
-**Work in progress, continued.** This is the second part of my [Hacker Holidays writeup](/posts/hackerholidays/). The first post covers the warm-up room plus the first eight released rooms; this one picks up from room 9 onward as they unlock. Same rule as part one: I only call out Claude where it actually did real work toward solving the room; rooms I got through on my own just read that way, no need to announce it. Flags stay redacted.
+This is the second and final part of my [Hacker Holidays writeup](/posts/hackerholidays/). The first post covers the warm-up room plus the first eight released rooms; this one picks up from room 9 through the event's last room, 14. Same rule as part one: I only call out Claude where it actually did real work toward solving the room; rooms I got through on my own just read that way, no need to announce it. Flags stay redacted.
 
 | Field | Details |
 |-------|---------|
 | Platform | TryHackMe |
 | Event | Hacker Holidays — "Welcome to The Byte Lotus" |
-| Rooms covered so far | Room 9, Room 10, Room 11, Room 12, Room 13 |
+| Rooms covered so far | Room 9, Room 10, Room 11, Room 12, Room 13, Room 14 |
 
 ## Room 9 — Crypto Cabana
 
@@ -394,6 +399,18 @@ Flag: `[redacted]`
 
 **What I'm actually taking from this room, blue-team side.** Every defense in this app was aimed at the wrong layer or the wrong trust boundary. Escaping `& < >` protects a browser rendering text to a human, it does nothing against a model reading that same text as instructions, and that's a distinction I hadn't had to think about before this room. A blocklist matching strings against a system that understands meaning is a mismatch by design, reword the intent and the list never fires. And authorization derived from the content of a previous, attacker-controlled message reads as forgeable to me now, no different in spirit from the network-position "authentication" in Room 11, just wearing a different shape. If I were watching this app for real, I'd want every tool call logged with the entry that triggered it, an alert on `override` coming from anything that isn't a verified out-of-band manager session, and a second alert on encoding words like `base64` or `rot13` showing up in guest-submitted text at all, since there's no legitimate reason a guestbook message would ever need one.
 
+## Room 14 — Management Wants a Word
+
+I'm not calling this one solved, not by me and not with Claude's help either. This is the event's last room, and I want to be upfront about why it's different from every other entry here: I watched [TryHackMe's own walkthrough video](https://youtu.be/qkxFwRH1fy0) for it, presented by Maxim, start to finish, rebuilt a few of the pieces myself afterward in my own Windows VM with impacket installed on Kali, and still didn't get through it on my own. I'm fairly sure Claude wouldn't have closed the gap either, not because the room is unfair, but because I don't know DPAPI or credential forensics well enough yet to know what questions to even ask about it. That's a different kind of gap than "I didn't know the syntax," it's not knowing the shape of the problem at all.
+
+The room hands you a KAPE export of Vera's Windows host, the AI concierge from the earlier rooms, and the job is to hunt down a password she never meant to leave behind. KAPE itself was new to me, a real forensic triage tool that collects a targeted set of artifacts, event logs, registry hives, browser data, instead of a full disk image, which is what makes it small enough to actually run at scale across a lot of hosts during an incident.
+
+The chain the video walks through: Chrome's own `Login Data` database holds Vera's saved password to the hotel's login portal, but as an encrypted blob prefixed `v10`, DPAPI-protected, decryptable offline if you can get hold of the right key. Getting there needs the SAM and SYSTEM registry hives pulled from the KAPE export, fed through impacket's `secretsdump` to get an NTLM hash, that hash cracked against an online lookup service to get Vera's actual Windows password, then impacket's `dpapi` module combined with that password and Vera's own DPAPI master-key file to decrypt the master key itself. That master key, in turn, decrypts Chrome's own internal AES key sitting in `Local State`, and only that AES key can finally decrypt the saved password blob. I got as far as running `secretsdump` myself against the hives in my own setup and matching what came out against the video, that part I can say I actually did. Everything past it, the DPAPI master-key decryption specifically, I only followed on screen.
+
+The decrypted password isn't even the flag. It's a lead back to a suspicious, exactly-100-megabyte file sitting in Vera's documents that turns out to be a VeraCrypt container, opened with that same reused password, holding the actual flag inside a PDF.
+
+**What actually stuck, defensive side.** A single DPAPI master key is the key to everything a Windows user has saved, browser passwords, Wi-Fi passwords, in some setups RDP credentials too. What makes that a bigger problem than one compromised laptop is that Active Directory environments keep a backup DPAPI key on the domain controller, specifically so a locked-out user's data isn't lost forever. Compromise that one domain controller and the same decrypt-the-master-key step from this room isn't limited to one host anymore, it's every DPAPI-protected secret on every host in the domain, and given how mechanical each individual step was, that reads like something an attacker could script and run across an entire network rather than one machine at a time. I'm not going to finish this room right now. I'm keeping it as the thing that tells me exactly what to go learn next instead.
+
 ## Lessons Learned
 
 **Room 9:** first time touching cloud at all, so the honest split matters here: I found the leaked token and worked out it was over-privileged on my own, but every actual Azure command, listing storage, downloading blobs, logging in as a service principal, querying the Key Vault, was new syntax I had Claude write, not something I could have typed myself. What's mine to keep is the pattern I actually recognized without help: rotating a secret is not the same as deleting it, and if the old version is still sitting in a vault's history, "we rotated it" doesn't mean the leak stopped mattering.
@@ -406,6 +423,14 @@ Flag: `[redacted]`
 
 **Room 13:** the first room in the whole event that had nothing to do with a binary or a web parameter, you're arguing with the model's own reasoning instead, and it's a genuinely different muscle than anything else in this series so far. The layer mismatch is the part I want to keep: escaping a few HTML characters protects a browser, not a model reading the same text as instructions, and I hadn't had to think about that distinction before. Pre-auth crossing between entries instead of living inside one, and folding an encoding word into the same payload as the command to dodge the output scrubber, both came from actually reading `vera.py` once I had a shell, not from guessing. The one place Claude wrote the actual line for me was the reverse-shell one-liner, it had to dodge `<`, `>`, and pipes to survive being embedded in a guestbook entry at all, and that's not something I wanted to work out from scratch. The SSH detour taught me something I'd want to check first next time: a valid key means nothing against a service account whose shell is `nologin`, that's worth one `grep` against `/etc/passwd` before spending any time on persistence at all.
 
-## To Be Continued
+**Room 14:** the room I didn't finish. In every other room this event, asking Claude for help got me unstuck and moving again, even Room 11's two-day detour ended once I actually asked the right question. This one was different: I didn't know enough about DPAPI, master keys, and credential forensics to know what the right question even was, so I doubt asking would have gotten me much further here either. Watching the video and rebuilding the `secretsdump` piece myself still taught me something concrete, what a DPAPI master key actually unlocks, and why a compromised domain controller turns that into a whole-network problem instead of a one-host one. That's what I'm keeping from this one, not a flag.
 
-More rooms are unlocking after this one. I'll keep adding to this post as they land. See [Part 1](/posts/hackerholidays/) for the warm-up through room 8.
+## Where This Leaves Me
+
+Room 14 was the event's last room, so this is also where this writeup ends.
+
+Fourteen days, fourteen rooms plus the warm-up, and the spread was bigger than I expected going in: prompt injection against an AI concierge, a cloud misconfiguration, a Windows forensics chain I still haven't finished, pure OSINT, a couple of straightforward boot2roots. Offense and defense both showed up, and so did wildly different difficulty levels, some rooms took me twenty minutes, Room 14 I'm still not done with.
+
+The comparison that actually matters to me is against Advent of Cyber 2025 last December. That event I mostly followed along with, more spectator than participant. This time I could actually attempt most rooms myself first, and see directly where I stood instead of watching someone else find the answer. That difference is the real result of the studying I've done since then, more than any single flag from this event is.
+
+It also showed me that I am just a beginner in this field. Room 14 wasn't a syntax gap Claude could patch, it was a genuine "I don't know what this topic even looks like" gap, and I'm keeping that as a marker for what to study next, not as a disappointment. Whatever the next event turns out to be, I'm looking forward to finding out how much further I get.
