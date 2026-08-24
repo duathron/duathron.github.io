@@ -112,3 +112,15 @@ And a naming trap I want on the record. I wanted the import to just be `shipwrig
 The honest open question is still how much to share. Every time a second tool wants something, I have to judge whether it is really the same need or two things that only look alike, and I am still learning to tell those apart. So far, waiting for the second real user has kept me from over-sharing, and I trust that more than my urge to tidy things up early.
 
 The next tool will be scaffolded from the template instead of assembled from scratch. That will be the first time the framework has to prove it helps at the *beginning* of a project and not only with the upkeep of one. I will write that up honestly too, including the parts where it gets in my way.
+
+## References
+
+- [barb](/posts/barb/)
+- [vex](/posts/vex/)
+- [sift](/posts/sift/)
+- [Shipwright on GitHub](https://github.com/duathron/shipwright)
+- [shipwright-kit on PyPI](https://pypi.org/project/shipwright-kit/)
+- [GitHub Actions](https://github.com/features/actions)
+- [CodeQL](https://codeql.github.com/)
+- [Software Bill of Materials (SBOM) — CISA](https://www.cisa.gov/sbom)
+- [PyPI Trusted Publishers](https://docs.pypi.org/trusted-publishers/)

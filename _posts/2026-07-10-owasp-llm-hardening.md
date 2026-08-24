@@ -109,3 +109,20 @@ Going in, I already understood one specific thing: `barb`, `vex`, and `sift` rea
 What I had not considered, until the smoke test forced the question, is that the LLM call itself is a separate attack surface from whatever the tool is built to detect. Scanning the input a tool processes for injection, and making sure what a tool sends to and renders from its own LLM is safe, are two different problems. I only started asking about the second one because a silent failure happened to break in front of me, not because I thought to look for it.
 
 That leaves an honest caveat on the word "hardened" in this post's title. These three tools are hardened against the seven gaps this specific audit found under the OWASP LLM Top 10 list an agent brought me, not against every way an LLM integration can go wrong. I would not have known to ask about that second list at all if a silent failure hadn't broken in front of me first.
+
+## References
+
+- [Shipwright](/posts/shipwright/)
+- [Sigmaforge](/posts/sigmaforge/)
+- [barb](/posts/barb/)
+- [vex](/posts/vex/)
+- [sift](/posts/sift/)
+- [Ollama](https://ollama.com)
+- [OWASP Top 10 for LLM Applications (2025)](https://genai.owasp.org)
+- [Rich on GitHub](https://github.com/Textualize/rich)
+- [Jira](https://www.atlassian.com/software/jira)
+- [Confluence](https://www.atlassian.com/software/confluence)
+- [shipwright-kit on PyPI](https://pypi.org/project/shipwright-kit/)
+- [sift-triage on PyPI](https://pypi.org/project/sift-triage/)
+- [barb-phish on PyPI](https://pypi.org/project/barb-phish/)
+- [vex-ioc on PyPI](https://pypi.org/project/vex-ioc/)

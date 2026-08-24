@@ -165,3 +165,9 @@ I went in assuming the hard part would be picking the right one of three options
 The bigger thing I hadn't considered until this round: eleven votes with zero disagreement looked like confidence to me. It told me nothing about whether the number underneath that agreement was actually true. It took a twelfth, adversarial pass through the real code to find out the room had unanimously agreed on something false. I don't think I would have caught that myself, and the room didn't either, not until someone whose entire job was to assume everyone else was wrong actually went and checked.
 
 What I hadn't expected going into the build itself: passing six rounds of review before a line of code existed didn't mean this particular risk was gone, it just hadn't shown up yet. Three more real bugs on this feature only showed up once someone actually wrote the code and ran it against real data, including one, the hash-seed bug, that had apparently been sitting in the very first commit the whole time, invisible until someone happened to run the exact same thing twice and noticed the numbers didn't match. The six rounds on the spec and the plan genuinely caught real problems. They just couldn't catch what only exists once actual code runs against actual data, because none of that existed yet when those six rounds happened.
+
+## References
+
+- [Sigmaforge](/posts/sigmaforge/)
+- [Shipwright](/posts/shipwright/)
+- [SigmaHQ — Sigma Rule Repository](https://github.com/SigmaHQ/sigma)

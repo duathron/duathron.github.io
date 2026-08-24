@@ -66,3 +66,8 @@ It is slower. A clean-on-first-try task now takes several passes, and most of th
 It is also not magic. The Skeptic is itself an agent and can be wrong, miss things, or flag a non-issue. It does not turn me into someone who can read code. What it does is move me from "I trust this agent" to "I trust this process," and for the one finding in Sigmaforge that mattered most, the 66 false positives on a single rule, I still read all 66 by hand and had that review checked too. The loop raises the floor. It does not remove the need to look.
 
 That is the honest version. The Skeptic loop is the closest thing I have to an answer for the question I started with: how does someone who cannot reliably catch the subtle bug in a large diff ship work he is willing to defend. Not by getting better at reading diffs. By never letting one agent be the last word.
+
+## References
+
+- [Shipwright](/posts/shipwright/)
+- [Sigmaforge](/posts/sigmaforge/)

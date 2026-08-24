@@ -386,3 +386,22 @@ The lesson I actually want to keep from this one isn't the vulnerability class, 
 ## Continued in Part 2
 
 Room 9 through the event's last room, 14, continue in [Part 2](/posts/hackerholidays-2/), including a look back at the whole event once it wrapped up.
+
+## References
+
+- [Hacker Holidays event hub, TryHackMe](https://tryhackme.com/hackerholidays)
+- [TryHackMe Room — The Brochure (Warm-up)](https://tryhackme.com/room/hh-thebrochure-081f3e36)
+- [TryHackMe Room — The Concierge Knows Too Much (Room 1)](https://tryhackme.com/room/hh-theconciergeknows-2d7eb4d9)
+- [TryHackMe Room — Room 404 (Room 2)](https://tryhackme.com/room/hh-room404-804573bf)
+- [TryHackMe Room — Complimentary (Room 3)](https://tryhackme.com/room/hh-complimentary-05e0b604)
+- [TryHackMe Room — Packed Light (Room 4)](https://tryhackme.com/room/hh-packedlight-02e5330c)
+- [TryHackMe Room — Beach Bar (Room 5)](https://tryhackme.com/room/hh-beachbar-d849f7f7)
+- [TryHackMe Room — Overheard at Breakfast (Room 6)](https://tryhackme.com/room/hh-overheardatbreakfast-6f01793c)
+- [TryHackMe Room — Do Not Disturb (Room 7)](https://tryhackme.com/room/hh-donotdisturb-84a45644)
+- [TryHackMe Room — Towel on the Sunbed (Room 8)](https://tryhackme.com/room/hh-towelonthesunbed-61271709)
+- [CyberChef](https://gchq.github.io/CyberChef/)
+- [revshells.com](https://www.revshells.com/)
+- [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
+- [Gravatar](https://gravatar.com/)
+- [TryHackMe Room — the race-conditions room referenced in Room 8](https://tryhackme.com/room/race-conditions-aoc2025-d7f0g3h6j9)
+- [Auditing barb, vex, sift against the OWASP LLM Top 10](/posts/owasp-llm-hardening/)

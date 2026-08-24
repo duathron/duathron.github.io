@@ -89,3 +89,9 @@ Pulling the raw events for the three main side-loaded files confirms they all lo
 ## Lessons Learned
 
 I still can't write a tight SPL pipeline from scratch, `stats`, `eval`, chained `table` commands are all things I know exist and don't yet reach for automatically. What actually got me through this room was leaning hard on the field sidebar, clicking into `Company`, `OriginalFileName`, `DestinationIp`, `TargetObject`, one at a time, and reading the top-value breakdown instead of writing the aggregation query myself. That's a slower way to work a SIEM than someone fluent in SPL would, and I want to name that plainly rather than write around it, but it got me to every answer this room asked for, and it taught me something a fast query would have skipped past: what noise actually looks like next to a real signal, 90% loopback traffic with a beacon buried under it, 173 events before I knew what to filter for. The DLL side-loading pattern is the technical thing I'm keeping past this specific room, a signed, legitimate binary isn't trustworthy just because it's signed, it's only as trustworthy as every file sitting next to it that it's willing to load without checking.
+
+## References
+
+- [TryHackMe Room — New Hire Old Artifacts](https://tryhackme.com/room/newhireoldartifacts)
+- [vex](/posts/vex/)
+- [NirSoft — ChromeCookiesView](https://www.nirsoft.net/utils/chrome_cookies_view.html)

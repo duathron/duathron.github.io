@@ -108,3 +108,19 @@ The big structural gaps are now closed: per-technique recall, one rule source, t
 - A corpus with an in-list service-tamper sample, so the Service Tampering fix can show detection is intact, not just argued.
 
 The harness works, installs, and is honest about what it cannot yet measure. Whether it is measuring something a SOC would care about is the open question I am still answering. Saying that plainly is more useful than a precision number I cannot defend.
+
+## References
+
+- [SigmaHQ — Sigma Rule Repository](https://github.com/SigmaHQ/sigma)
+- [Sigmaforge on GitHub](https://github.com/duathron/sigmaforge)
+- [sigmaforge on PyPI](https://pypi.org/project/sigmaforge/)
+- [Zircolite](https://github.com/wagga40/Zircolite)
+- [splunk/attack_data](https://github.com/splunk/attack_data)
+- [MITRE ATT&CK](https://attack.mitre.org/)
+- [Nextron Systems — evtx-baseline](https://github.com/NextronSystems/evtx-baseline)
+- [DARPA OpTC dataset](https://github.com/FiveDirections/OpTC-data)
+- [Shipwright](/posts/shipwright/)
+- [COMISET dataset](https://zenodo.org/records/15375146)
+- [PyYAML on PyPI](https://pypi.org/project/PyYAML/)
+- [Ninite](https://ninite.com/)
+- [TeamViewer](https://www.teamviewer.com/en/)

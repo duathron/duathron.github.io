@@ -434,3 +434,20 @@ Fourteen days, fourteen rooms plus the warm-up, and the spread was bigger than I
 The comparison that actually matters to me is against Advent of Cyber 2025 last December. That event I mostly followed along with, more spectator than participant. This time I could actually attempt most rooms myself first, and see directly where I stood instead of watching someone else find the answer. That difference is the real result of the studying I've done since then, more than any single flag from this event is.
 
 It also showed me that I am just a beginner in this field. Room 14 wasn't a syntax gap Claude could patch, it was a genuine "I don't know what this topic even looks like" gap, and I'm keeping that as a marker for what to study next, not as a disappointment. Whatever the next event turns out to be, I'm looking forward to finding out how much further I get.
+
+## References
+
+- [TryHackMe Room — Crypto Cabana (Room 9)](https://tryhackme.com/room/hh-cryptocabana-f81cac95)
+- [TryHackMe Room — The Hollow Shell (Room 10)](https://tryhackme.com/room/hh-thehollowshell-ddb582ac)
+- [TryHackMe Room — Infinity Pool (Room 11)](https://tryhackme.com/room/hh-infinitypool-5b3548af)
+- [TryHackMe Room — After Hours (Room 12)](https://tryhackme.com/room/hh-afterhours-b090d1f0)
+- [TryHackMe Room — The Guestbook (Room 13)](https://tryhackme.com/room/hh-theguestbook-0130ffaf)
+- [TryHackMe Room — Management Wants a Word (Room 14)](https://tryhackme.com/room/hh-managementwantsaword-6bf3cc41)
+- [CyberChef](https://gchq.github.io/CyberChef/)
+- [chisel on GitHub](https://github.com/jpillora/chisel)
+- [Room 11 walkthrough video](https://youtu.be/wP_5wv4sp1M)
+- [seangoedecke.com — "LLMs reward expertise"](https://www.seangoedecke.com/llms-reward-expertise/)
+- [Room 14 walkthrough video, TryHackMe](https://youtu.be/qkxFwRH1fy0)
+- [ILSpy on GitHub](https://github.com/icsharpcode/ILSpy)
+- [Impacket on GitHub](https://github.com/fortra/impacket)
+- [KAPE documentation](https://ericzimmerman.github.io/KapeDocs/)
