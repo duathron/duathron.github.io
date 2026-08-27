@@ -3,6 +3,7 @@ title: "Investigating with Splunk"
 date: 2026-08-27 08:00:00 +0100
 categories: [Writeups, TryHackMe]
 tags: [splunk, windows-event-logs, powershell, sysmon, threat-hunting, base64, c2, blue-team]
+published: true
 image:
   path: /assets/img/posts/investigating-with-splunk/cover.png
 ---

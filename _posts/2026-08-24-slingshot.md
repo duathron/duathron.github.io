@@ -3,6 +3,7 @@ title: "Slingshot"
 date: 2026-08-24 08:00:00 +0100
 categories: [Writeups, TryHackMe]
 tags: [elk, kibana, kql, log-analysis, web-attack, lfi, sql-injection, threat-hunting]
+published: true
 image:
   path: /assets/img/posts/slingshot/cover.png
 ---

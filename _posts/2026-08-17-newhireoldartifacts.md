@@ -14,6 +14,7 @@ tags:
   - credential-theft
   - blue-team
   - vex
+published: true
 image:
   path: /assets/img/posts/newhireoldartifacts/cover.png
 ---
