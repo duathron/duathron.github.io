@@ -1,0 +1,17 @@
+overpass2 -hacked room
+
+schaue dir die screenshots an und recherchiere online andere writeups.
+
+ich habe mich den raum über an den fragen orientiert, aber manche antworten schon gefunden, bevor die fragen gestellt wurden. das pcap file zeigt direkt ein upload.php -> vermutlich eine reverse shell. also die file über wireshark exportiert und angesehen. dort ist eine minimalistische reverse shell eingebettet. weiter nach traffic der attacker ip gesucht und dem tcp stream folgen -> terminal befehle, github download, passwort, ssh keygen, /etc/shadow etc...
+
+dann die passwörter aus der shadow file cracken mit hilfe von john. hier gab es den hinweis zur fasttrack wordlist dazu, welche ich mir direkt gespeichert habe. relativ simpler john befehl
+
+task 2 analysierte die backdoor. default hash direkt aus dem repo lesbar, ebenso wie das hardcoded salt. den hash des attackers konnte man im pcap nachlesen. 
+
+um das passwort des attackers zu bekommen, musste ich eine file anlegen, die john verarbeiten konnte -> das musste ich nochmal googlen: attacker:password_hash$salt
+
+aber damit war es nicht getan: john selbst erkannte selbst nicht, dass es ein SHA512 hash ist. und mit dem salt wusste ich auch nicht direkt weiter. also auch das gegooglet und auf "--format='dynamic=SHA512($p.$s)" gestoßen - damit war das passwort sehr schnell geknackt. 
+also stellen wir eine ssh verbindung her. den hash und salt in eine ssh file kopieren mit ssh-rsa header und verbinden: ssh -i rsa_hash <IP> -p 2222 -> klappt aber nicht. der port 2222 war aus dem pcap ebenfalls ersichtlich. ssh-rsa wird aber nicht mehr einfach so unterstütz, weshalb ein override nötig ist: -o HostKeyAlgorithms=+ssh-rsa  (ebenfalls gegoogelt). 
+danach erfolgte der login mit dem gecrackten passwort und wir waren mit james account verbunden. -> cat ~/user.txt für die flag. 
+
+der letzte schritt war der root zugriff. per ssh führte das passwort für den user james nicht weiter um root zugriff zu bekommen. auch die anderen user konnte ich nicht per su nutzen. im home folder stach aber eine große executable dank ls -la sofort heraus. .suid_bash -> also ausgeführt und wir hatten ein neues terminal. aber ich konnte hier auch nicht mehr erreichen. ich war mir sicher, dass es der richtige weg ist, aber was fehlte? google sagt: -p flag um rechte zu erhalten. volltrffer: ./suid_bash -p führte zu rootzugriff und cat /root/root.txt lieferte die flag
