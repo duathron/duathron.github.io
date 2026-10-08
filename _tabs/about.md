@@ -6,6 +6,8 @@ order: 4
 
 # About
 
+*Last updated: 8 October 2026*
+
 Technology has been part of my life for as long as I can remember. A Game Boy at
 four. A self-built 486 at twelve, assembled from spare parts salvaged from my
 parents' office, running DOS and Windows 95. As a teenager I ran the network
@@ -38,37 +40,55 @@ take my technical curiosity seriously, as a profession. Since then I've been lea
 consistently: evenings, weekends, alongside a full-time freelance career and a busy
 family life with a young child. Motivation was never the question.
 
+My goal is a role as a SOC analyst. Longer term I'm heading towards detection
+engineering and AI security, the place where my two interests meet.
+
 ## What I'm working on
 
 I passed the Security Analyst Level 1 (SAL1) certification on my first attempt with
-850/1000, after completing TryHackMe's SOC Level 1 path. On TryHackMe I'm in the top
-1%, now working through threat intelligence, detection engineering, DFIR,
-and AI security. In parallel I'm finishing Google's IT Support Professional Certificate
-on Coursera, with four of five courses done.
+850/1000, after completing TryHackMe's SOC Level 1 path. On TryHackMe I've completed
+315 rooms and rank in the top 1% worldwide (#5,470, as of 22 September 2026).
+Right now I'm working through the Security Engineer and AI Security paths.
+
+Hands-on, most of my SIEM practice so far has been with Splunk and the Elastic Stack
+in lab environments. Next on my list are home labs I set up and run myself, starting
+with vulnerability management: scanning, CVSS-based prioritisation, remediation and
+re-scan.
 
 ## Tools I've built
 
-I design, specify, and test-drive security tools, then publish them on PyPI. The
-implementation runs through an AI-assisted workflow with review gates; the
-architecture, specifications, test design, and security logic are mine.
+I build security tools by orchestrating AI agents, and publish them on PyPI. My part
+is the goal, the steering, and understanding every component well enough to explain
+it. The workflow itself is my own design: independent review gates, multi-agent design
+reviews, and a rule that the AI never signs off its own work. I don't present the code
+as hand-written, and I'm happy to be tested on the concepts.
 
 - **[sift](https://github.com/duathron/sift)** – an alert-triage summarizer with
-  four LLM providers, a built-in prompt-injection scanner, and 1,145 tests
+  four LLM providers, defences against prompt injection, ticketing to Jira, TheHive
+  and ServiceNow, and more than 1,100 tests
 - **[vex](https://github.com/duathron/vex)** – IOC enrichment against VirusTotal,
-  STIX 2.1, MITRE ATT&CK, and WHOIS
-- **[barb](https://github.com/duathron/barb)** – a phishing-analysis tool that works
-  offline by design, with opt-in OSINT enrichment when you want it
-- **[sigmaforge](https://github.com/duathron/sigmaforge)** *(in progress)* – an
-  honest backtest harness for Sigma detection rules: it measures whether a rule
-  actually fires on the attack it targets and how often it fires on normal activity.
-  My first detection-engineering work sample.
+  AbuseIPDB, Shodan, WHOIS, MISP and OpenCTI, with STIX 2.1 and MITRE ATT&CK
+  Navigator export
+- **[barb](https://github.com/duathron/barb)** – a phishing-URL analyser that works
+  offline by design, with opt-in OSINT enrichment and an evaluation harness against
+  an 800-URL corpus
+- **[sigmaforge](https://github.com/duathron/sigmaforge)** – an honest backtest
+  harness for Sigma detection rules: it measures whether a rule actually fires on the
+  attack it targets and how often it fires on normal activity, and reports
+  "unmeasured" where the data isn't good enough to say. My first detection-engineering
+  work sample, still evolving.
+- **[shipwright](https://github.com/duathron/shipwright)** – the shared library and
+  agent framework underneath the other tools: evaluation gates, security helpers and
+  project scaffolding
 
 ## Certifications
 
-- **SEC1** – Security Fundamentals *(TryHackMe)*
-- **SAL1** – Security Analyst Level 1, 850/1000 on the first attempt *(TryHackMe, 2026)*
-- **Google IT Support Professional Certificate** – four of five courses done *(Coursera)*
-- **CompTIA Security+** – planned for Q3 2026
+- **SEC1** – Cyber Security 101 *(TryHackMe, February 2026)*
+- **Python Fundamentals with Practical Projects** *(Hyperskill / JetBrains Academy, February 2026)*
+- **SOC Level 1** learning path, completed *(TryHackMe, April 2026)*
+- **SAL1** – Security Analyst Level 1, 850/1000 on the first attempt *(TryHackMe, May 2026)*
+- **Google IT Support Professional Certificate** – six courses *(Coursera, July 2026)*
+- **Google AI Professional Certificate** – seven courses *(Coursera, August 2026)*
 
 ## Why this blog
 
