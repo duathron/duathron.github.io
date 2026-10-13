@@ -6,7 +6,7 @@ order: 4
 
 # About
 
-*Last updated: 8 October 2026*
+*Last updated: 13 October 2026*
 
 Technology has been part of my life for as long as I can remember. A Game Boy at
 four. A self-built 486 at twelve, assembled from spare parts salvaged from my
@@ -45,9 +45,9 @@ engineering and AI security, the place where my two interests meet.
 
 ## What I'm working on
 
-I passed the Security Analyst Level 1 (SAL1) certification on my first attempt with
-850/1000, after completing TryHackMe's SOC Level 1 path. On TryHackMe I've completed
-315 rooms and rank in the top 1% worldwide (#5,470, as of 22 September 2026).
+I passed TryHackMe's Security Analyst Level 1 (SAL1) certification on my first
+attempt with 850/1000, after completing the SOC Level 1 path. On TryHackMe I've completed
+318 rooms and rank in the top 1% worldwide (#5,330, as of 12 October 2026).
 Right now I'm working through the Security Engineer and AI Security paths.
 
 Hands-on, most of my SIEM practice so far has been with Splunk and the Elastic Stack
@@ -80,6 +80,22 @@ as hand-written, and I'm happy to be tested on the concepts.
 - **[shipwright](https://github.com/duathron/shipwright)** – the shared library and
   agent framework underneath the other tools: evaluation gates, security helpers and
   project scaffolding
+
+## Open source
+
+I'm a member of the contributors team of
+[career-ops](https://github.com/career-ops-hq/career-ops), an open-source toolkit for
+running a job search. I use it for my own search, and when something didn't work for
+my case, I fixed it upstream. Three of my pull requests have been merged so far,
+built the same way as my own tools, through AI-agent orchestration:
+
+- the fact gate now reads counts in German documents, so German CVs and cover
+  letters are checked against invented numbers too
+  ([#5074](https://github.com/career-ops-hq/career-ops/pull/5074))
+- score parsing in the batch runner no longer depends on the system locale
+  ([#3999](https://github.com/career-ops-hq/career-ops/pull/3999))
+- the Personio scanner supports career pages that embed their job board
+  ([#4001](https://github.com/career-ops-hq/career-ops/pull/4001))
 
 ## Certifications
 
