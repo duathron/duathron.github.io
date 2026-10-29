@@ -1,6 +1,6 @@
 ---
 title: The Waiting Room
-date: 2026-10-31 08:00:00 +0100
+date: 2026-11-06 08:00:00 +0100
 categories:
   - Writeups
   - TryHackMe
@@ -101,6 +101,13 @@ The SHA256 of that CSV content `[redacted]` was the room's final answer.
 - I'd never heard of the Right-to-Left Override trick before this room. I stared at that reversed filename for longer than I'd like to admit before I remembered my own earlier note about the stray codepoint sitting next to it, and only understood what I was looking at after searching for the codepoint itself.
 - I got stuck on an unmatched hash for a while because I skipped VirusTotal entirely at first. Having the hash isn't the same as having checked it against anything.
 - I don't know JavaScript well, and I used an AI assistant to help read through the obfuscated loader rather than pretending I worked it out line by line myself. That's genuinely how I got through it, RC4 included. I wouldn't have named the algorithm on my own.
+
+## Defensive Takeaways
+
+- A detection rule flagging the U+202E Right-to-Left Override codepoint in filenames would have caught the disguised `.hta` before `mshta.exe` ever ran it. That character has almost no legitimate use in a filename.
+- `ONENOTE.EXE` spawning `mshta.exe`, which in turn spawns `cscript.exe`, is a chain an Office application has no business starting. An Attack Surface Reduction rule blocking Office apps from creating child processes would have stopped this at the very first step.
+- A mail gateway that inspects `.one`/OneNote attachments for embedded script content, instead of only matching known-bad hashes, would have had a shot at this before it ever reached `m.smith`'s inbox.
+- The exported `remittance-v2.png` was flagged by `file` as plain "data," not an image, despite the extension. A mismatch between declared Content-Type and actual content is a usable network-level indicator for catching disguised exfil or payload traffic on the wire.
 
 ## References
 

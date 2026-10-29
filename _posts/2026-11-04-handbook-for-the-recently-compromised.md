@@ -1,6 +1,6 @@
 ---
 title: "Handbook for the Recently Compromised"
-date: 2026-10-30 09:00:00 +0100
+date: 2026-11-04 09:00:00 +0100
 categories: [Writeups, TryHackMe]
 tags: [windows-forensics, sysmon, powershell, living-off-the-land, cyberchef]
 image:
@@ -81,6 +81,13 @@ The script writes that decoded value out to a cache file under `%TEMP%\PipelineS
 - A wildcard glob in a command line (`certu*.exe`) is easy to miss if you're grepping for the literal binary name. I started broad with PowerShell itself and only noticed the wildcard once I was already reading the full command.
 - Script Block Logging turning obfuscated, string-concatenated PowerShell back into its final, readable form was the part that actually made this solvable. Without it, the flag would've stayed buried in dozens of joined string fragments.
 - Walking this log by `ProcessId`/`ParentProcessId`, one grep at a time, was slow, but it was the only way I had to put the chain back together with just one event log to go on.
+
+## Defensive Takeaways
+
+- PowerShell Script Block Logging is the only reason the base64 payload was recoverable at all. Without it, defenders would see the certutil download and nothing about what the script actually did afterward.
+- Detection has to match the download's behavior, not the literal command-line string. `certu*.exe` defeats name-based detection; matching on `certutil.exe making a network connection and writing a file` instead would have caught it regardless of how the binary got invoked.
+- `mshta.exe` has very little legitimate use in a modern environment. Blocking or alerting on it outright would have stopped the whole chain at its actual starting point, before certutil or the scheduled task ever ran.
+- A scheduled task created with `/rl highest /sc onlogon`, whose parent process is `powershell.exe` rather than an installer, is worth alerting on by itself — that combination is a persistence pattern, not routine software setup.
 
 ## References
 
