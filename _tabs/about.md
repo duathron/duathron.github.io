@@ -6,7 +6,7 @@ order: 4
 
 # About
 
-*Last updated: 13 October 2026*
+*Last updated: 18 October 2026*
 
 Technology has been part of my life for as long as I can remember. A Game Boy at
 four. A self-built 486 at twelve, assembled from spare parts salvaged from my
@@ -86,7 +86,7 @@ as hand-written, and I'm happy to be tested on the concepts.
 I'm a member of the contributors team of
 [career-ops](https://github.com/career-ops-hq/career-ops), an open-source toolkit for
 running a job search. I use it for my own search, and when something didn't work for
-my case, I fixed it upstream. Three of my pull requests have been merged so far,
+my case, I fixed it upstream. Four of my pull requests have been merged so far,
 built the same way as my own tools, through AI-agent orchestration:
 
 - the fact gate now reads counts in German documents, so German CVs and cover
@@ -96,6 +96,9 @@ built the same way as my own tools, through AI-agent orchestration:
   ([#3999](https://github.com/career-ops-hq/career-ops/pull/3999))
 - the Personio scanner supports career pages that embed their job board
   ([#4001](https://github.com/career-ops-hq/career-ops/pull/4001))
+- a scanner for the careers site of BWI GmbH, with paced detail requests that
+  never leave the company's own host
+  ([#4000](https://github.com/career-ops-hq/career-ops/pull/4000))
 
 ## Certifications
 
