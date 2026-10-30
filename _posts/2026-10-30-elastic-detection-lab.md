@@ -15,7 +15,7 @@ image:
   path: /assets/img/posts/elastic-detection-lab/cover.png
 ---
 
-## The Problem
+## The Problem 
 
 I'd already worked through TryHackMe's "Overpass 2 - Hacked" room: a PCAP of a real attack, read by hand in Wireshark, question by question. That's forensics, reading something that already happened. What it doesn't teach is what happens *before* someone reads the capture: how an alert gets generated in the first place, out of raw traffic, without a human already knowing what to look for.
 
