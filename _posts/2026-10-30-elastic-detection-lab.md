@@ -25,7 +25,7 @@ So I set myself a second use case against the same PCAP: build a real Elastic Se
 
 The lab is a single-node Elastic Stack, Elasticsearch + Kibana + Packetbeat 9.5.5, running in Docker (via OrbStack on my machine, arm64). A bash script, `ingest.sh`, takes the Overpass 2 PCAP, converts it if needed, hashes it, and feeds it to Packetbeat, which writes the traffic into Elasticsearch as searchable events. On top of that sit two detection rules in Elastic Security, each built against one specific thing the attacker did:
 
-**"mkfifo in HTTP request body"** (severity high): a custom-query rule that matches `http.request.body.content.text : *mkfifo*`. The room's own attack carries a POST whose body contains a `mkfifo`-based reverse shell command. The rule doesn't care whether `mkfifo` is dangerous on its own, it isn't, it's a normal tool for inter-process communication. What makes it worth flagging here is the context: a shell command inside the body of an HTTP request to a web server stands out. I set the severity to high on gut feeling first, with the context already in the rule's name, and I haven't tested how often the rule would fire on legitimate traffic.
+**"mkfifo in HTTP request body"** (severity high): a custom-query rule that matches `http.request.body.content.text : *mkfifo*`. The room's own attack carries a POST whose body contains a `mkfifo`-based reverse shell command. The rule doesn't care whether `mkfifo` is dangerous on its own, it isn't, it's a normal tool for inter-process communication. What makes it worth flagging here is the context: a shell command inside the body of an HTTP request to a web server stands out. I set the severity to high on gut feeling first, with the context already in the rule's name, and beyond the five benign bodies in the follow-up round below, I haven't tested how often the rule would fire on legitimate traffic.
 
 **"Suspicious connection from server over unusual port"** (severity medium): a threshold rule that fires when the server itself opens a connection to a port other than 443 or 53, grouped by destination IP and port. This one's built to catch the outbound side of the attack, the reverse shell calling back to the attacker on port 4242, and a second thing I didn't expect to find (more on that below).
 
@@ -166,8 +166,65 @@ Eight total alerts came out of both rules across several re-ingests. The mkfifo 
 - **Guard placed after the operation it was supposed to prevent.** An early `ingest.sh` draft checked for a potential evidence-overwrite collision *after* the `editcap` call that would cause it, which defeats the entire point of the guard.
 - **Discover time range silently hides data.** A query that should return 71 documents returned 61 because the default range excluded the 10 events still carrying their original 2020 timestamps.
 
+## Trying to Break the mkfifo Rule
+
+A few days after building the two rules, I came back to test something narrower about the first one: which variations on the control string's text would slip past a rule matching `*mkfifo*`. I wanted some benign bodies in there too, to check for false positives, so Claude worked out a plan: ten variants of the control string, plus five harmless ones that either mention `mkfifo` in passing or just look like ordinary form data. I created all fifteen as text files and sent each one as a multipart POST to a listener on my own machine, captured with `tcpdump`. None of these fifteen files was ever executed. They're text sitting in an HTTP body, nothing else, nothing left my own loopback interface.
+
+I fed that capture into the same lab and checked it against the rule I'd already built:
+
+| Body sent | Alert? |
+|---|---|
+| `mkfifo ...` (control, with the documentation address `192.0.2.1` in place of a real one) | yes |
+| `mk''fifo` (quotes removed) | no |
+| `mk""fifo` (double quotes) | no |
+| `mk\fifo` (backslash) | no |
+| `'m'kf'i'fo` (quotes at odd positions) | no |
+| `MKFIFO` (all caps) | yes |
+| `MkFiFo` (mixed case) | yes |
+| `mknod /tmp/f p` (same idea, different command) | no |
+| the control, base64-encoded and piped through `base64 -d \| sh` | no |
+| `mk$@fifo` (stray parameter expansion) | no |
+| a sentence just explaining what a FIFO is | no |
+| a tutorial-style sentence that happens to use the word `mkfifo` | yes |
+| ordinary form data, a name field and a comment field | no |
+| base64 of a harmless sentence | no |
+| an unrelated sentence with a stray quote and backslash | no |
+
+<img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_11.png" width="700" alt="Kibana Discover showing all 15 request bodies ingested into packetbeat-*, scrolled, four rows visible">
+
+<img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_12.png" width="700" alt="Kibana Discover filtered to the 4 documents matching the mkfifo rule's query, with their ingest timestamps">
+
+My first guess, a day before running this, was that only the plain control would fire. I revised that once I remembered an earlier test of mine showing that `.text` gets lowercased before matching, so case alone wouldn't save anything. With that in mind, before enabling the rule I predicted exactly four of these would alert: the plain control, the two case variants, and the tutorial sentence, on the reasoning that those are the only bodies where the word `mkfifo` shows up intact as one token. That's exactly what happened:
+
+<img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_14.png" width="700" alt="Kibana Discover showing the 4 alerts, with their source ports and request bodies visible in original case">
+
+Seven of the nine variants that changed something about the string got past the rule, and none of them was ever run, so this only shows the string escaped the rule's text match, not that quote removal or `mknod` would work as a real reverse shell if someone typed it into a shell. The two that did alert, `MKFIFO` and `MkFiFo`, differ from the control only in case, exactly the thing my revised prediction expected. The one false positive, a sentence that just mentions `mkfifo` without being an attack at all, fired for the same reason: the rule has no idea what context the word sits in, it only sees the token.
+
+The rule matches a literal string, case-insensitively. It has no model of what a shell would do with any of these, whether quote removal reconstructs `mkfifo` at runtime or not. Quote removal, the backslash, `mknod`, and `mk$@fifo` all came from Claude; I hadn't seen `mk''fifo` or `mknod` before.
+
+### A detour: the alerts didn't come from where I expected
+
+The plan was to enable the rule more than six minutes after ingesting the capture, confirm it caught nothing automatically over that gap, then trigger a manual rule run and see which of the fifteen bodies it flagged. What actually happened: the very first run after I enabled the rule (I didn't capture the run type) produced all four alerts by itself, before I'd started any manual run at all.
+
+<img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_13.png" width="700" alt="Kibana rule execution log showing manual and scheduled runs, all succeeded, 0 new alerts">
+
+The failed 21:21 run that produced the four alerts isn't in that screenshot, and I didn't save the Gaps panel either, both details come from the notes I took at the time. That run's own status was `failed`, with Kibana reporting that roughly a day's worth of time "were not queried between this rule execution and the last execution, so signals may have been missed." The Gaps panel showed an unfilled gap running from the previous evening to 20:55:43, about 26 minutes before that run. My ingest actually landed at 21:06:21, after that gap had already closed, about 15 minutes before the run: outside the rule's normal six-minute look-back, but inside the 26-minute catch-up window. Claude dug through Kibana's current source code for me, not the version this lab actually runs, and turned up a constant capping gap catch-up at four intervals, which is where that 26-minute number comes from (six-minute look-back plus four more five-minute intervals). The arithmetic fits that explanation, but I never confirmed it against the lab's own installed version, so that's as far as I can state it, what the numbers fit, not confirmed behavior. Either way, the plan's assumption, which I accepted, that enabling the rule wouldn't catch anything on its own was wrong: in my lab the rule alerted by itself after a gap, which fits catch-up behavior but isn't confirmed on the installed version. The manual run I'd planned happened afterward anyway, six runs over the same period, all succeeded, no new alerts. The runs alone don't prove why, nothing matched would look the same, but the Discover hits make the likely reading that the four documents that mattered already had an alert on record, and the same index-and-`_id` combination doesn't alert twice.
+
+### What this did and didn't prove
+
+- This only measures fifteen test bodies, from a plan Claude put together, sent to my own loopback interface. It says something about this one rule's text match, not about noise on a real network. This was a replay of a capture, not live detection.
+- The "no" rows rest on Discover: the rule's own query matched exactly the same 4 of 15 documents there, independently of whatever window the rule itself was running on. That's a separate check from the alerts, not just an assumption from silence.
+- None of the fifteen bodies were ever executed. Whether quote removal or `mknod` would produce a working reverse shell in a real shell is a separate, untested question, this only tested what the rule's query sees.
+- `MKFIFO` and `MkFiFo` wouldn't run as valid commands on an actual Linux shell written that way. They tested the rule, not a working attack.
+- Only multipart request bodies on the ports Packetbeat is configured to inspect ever reach this field at all. A different content type, or a port outside that list, is invisible to this rule from the start.
+- `/dev/tcp`-style reverse shells, or anything that builds a shell without `mkfifo` or `mknod` showing up at all, aren't covered by this rule and weren't part of this test. That's a separate, known gap for a rule I haven't written yet.
+- One loose end I can't explain: `kibana.alert.original_time` came back empty on all four of these alerts, a field that was filled in correctly on the alerts from the first round of testing.
+
+I learned more about bash scripting out of this round than about Elastic itself, if I'm honest. I wrote the actual test script over something like nine drafts across two sittings, and most of what went wrong was mine: a missing shebang that had the whole thing running under `dash` instead of `bash` and failing on `[[`, mixing up `$(...)` with `$((...))`, and not knowing yet that `grep -q` can drive an `if` directly instead of capturing its output first. Claude caught those as they came up, and also supplied the glob line that picked up all the files, the `curl -F "cmd=<file"` form for posting a file's content, the `if grep ...; then continue; fi` pattern, and pointed out where the log line, the done-list write, and `touch` belong. Claude also named the `-w` variable for reading back the source port, and pointed me at bash's own random-number variable for spacing out the requests. The retry logic itself, how many attempts count as failure and what the script's done-list is for, I designed myself. It's less a tool verdict and more a snapshot of where I am right now: still learning to script alongside the rest of security itself, and this was the most hands-on bash work I've done so far.
+
 ## Next Steps
 
+- A follow-up round, not started yet and without a plan: actually checking which fields and mappings this rule can see before deciding whether a broader rule, maybe something regex-based, is worth building. Open question I don't have an answer to yet: whether a regex on `.text` would even help, since matching there happens per token rather than over the whole string.
 - A real packet-time-preserving ingest path (Zeek's `conn.log` or similar) instead of Packetbeat flows, to get accurate connection durations without replaying in real time.
 - Working out why Packetbeat's own `pipeline:` setting never reached the write requests, rather than routing around it with `final_pipeline`.
 - Revisiting the port allowlist: it currently only excludes 443 and 53 by port number, which means the backdoor's own download over 443 and any DNS-tunneling traffic over 53 would both pass through unflagged. A pairing of port *and* expected destination would close part of that gap, not built yet.
