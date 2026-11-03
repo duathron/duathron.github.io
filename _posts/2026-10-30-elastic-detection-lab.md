@@ -222,6 +222,53 @@ The failed 21:21 run that produced the four alerts isn't in that screenshot, and
 
 I learned more about bash scripting out of this round than about Elastic itself, if I'm honest. I wrote the actual test script over something like nine drafts across two sittings, and most of what went wrong was mine: a missing shebang that had the whole thing running under `dash` instead of `bash` and failing on `[[`, mixing up `$(...)` with `$((...))`, and not knowing yet that `grep -q` can drive an `if` directly instead of capturing its output first. Claude caught those as they came up, and also supplied the glob line that picked up all the files, the `curl -F "cmd=<file"` form for posting a file's content, the `if grep ...; then continue; fi` pattern, and pointed out where the log line, the done-list write, and `touch` belong. Claude also named the `-w` variable for reading back the source port, and pointed me at bash's own random-number variable for spacing out the requests. The retry logic itself, how many attempts count as failure and what the script's done-list is for, I designed myself. It's less a tool verdict and more a snapshot of where I am right now: still learning to script alongside the rest of security itself, and this was the most hands-on bash work I've done so far.
 
+Here's `curling.sh` as it actually ran, untouched, redundant `-f` check and trailing semicolons and all. A tidied-up version would make it look like I know more bash than I do right now:
+
+```bash
+#!/usr/bin/env bash
+
+logfile="send_log_real.txt"
+donefile="done_real.txt"
+
+if [[ ! -f "$donefile" ]]; then
+	touch "$donefile";
+fi
+
+for file in ./v*.txt ./n*.txt; do
+	count=0
+	
+	
+	if grep -Fq -- "$file" "$donefile"; then
+		continue
+	fi
+
+	while [[ "$count" -lt 3 ]]; do
+		sleep $(((RANDOM % 4) + 2));
+		call=$(curl -sS -o /dev/null -w '%{response_code} %{local_port}' -F "cmd=<$file" http://127.0.0.1:8081/upload);
+		exitcode=$?;
+		local_port=$(echo "$call"|cut -d ' ' -f2);
+		response_code=$(echo "$call"|cut -d ' ' -f1);
+		# Log activity
+		echo "$(date -u -Iseconds) - Try $((count + 1)) on file $file with port $local_port. (Exit code: $exitcode // Status code: $response_code)" >> "$logfile";
+		if [[ "$exitcode" -eq 0 && "$response_code" -eq 501 ]]; then
+			echo "$file: Success (Local port: $local_port, Exit code: $exitcode // Status code: $response_code)";
+			echo "$(date -u -Iseconds) - file: $file,local port: $local_port" >> "$donefile";
+			break;
+		else
+			echo "$file: Try $((count + 1)) failed on port $local_port.(Exit code: $exitcode) // Status code: $response_code";
+			count=$((count + 1))
+		fi
+	done
+	
+	if [[ "$count" -ge 3 ]]; then
+	echo "$file: All $count tries against $local_port failed  (Exit code: $exitcode // Status code: $response_code)"
+	fi
+
+done
+```
+
+In the real run, all fifteen files went through on the first `curl` attempt each, so the retry loop and the done-list skip check never had anything to do. I only watched those two paths actually fire in an earlier dry run, where I stopped the listener partway through on purpose to force a failure.
+
 ## Next Steps
 
 - A follow-up round, not started yet and without a plan: actually checking which fields and mappings this rule can see before deciding whether a broader rule, maybe something regex-based, is worth building. Open question I don't have an answer to yet: whether a regex on `.text` would even help, since matching there happens per token rather than over the whole string.
