@@ -15,7 +15,7 @@ image:
   path: /assets/img/posts/elastic-detection-lab/cover.png
 ---
 
-## The Problem 
+## The Problem
 
 I'd already worked through TryHackMe's "Overpass 2 - Hacked" room: a PCAP of the room's attack scenario, read by hand in Wireshark, question by question. That's forensics, reading something that already happened. What it doesn't teach is what happens *before* someone reads the capture: how an alert gets generated in the first place, out of raw traffic, without a human already knowing what to look for.
 
@@ -38,6 +38,10 @@ Both rules are tested against the known incident capture, re-ingested into the l
 Writing the two rules in Elastic's query bar took less time than getting a working stack to run them against. Docker together with OrbStack was new to me going in, and the compose file, cert setup, and Packetbeat config all had their own ways of going wrong before anything reached a rule.
 
 `compose.yml` is Elastic's own multi-node example template, cut down to one node. A `setup` container runs once: it generates a CA and certificates with `elasticsearch-certutil`, waits for Elasticsearch to respond, and sets the `kibana_system` password, all before Elasticsearch or Kibana are allowed to start (`depends_on: condition: service_healthy`). The first real error I hit here was a misleading one: Kibana reported "detection engine permissions required" on startup, which sounds like an access problem. The actual cause, found by reading the API's own error message more carefully, was a missing encryption key: it specifically named the "Encrypted Saved Objects plugin," which maps to `XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY`, unset in `.env`. Nothing to do with permissions at all.
+
+The cert setup caused its own trouble too. In an early test run, Packetbeat's log showed it failing to connect to Elasticsearch with `x509: certificate signed by unknown authority`:
+
+<img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_01.png" width="700" alt="Packetbeat JSON log showing an x509 certificate signed by unknown authority error during an early test run">
 
 `packetbeat.yml` is where the actual pipeline lives: which protocols and ports to parse (HTTP's list includes 8080, which turns out to matter later), capturing the HTTP request body for multipart uploads, and two `fingerprint` processors that hash each event's identifying fields into a deterministic `_id`:
 
@@ -100,8 +104,6 @@ The fixed order: name the converted file with a suffix that can never collide wi
 
 ### Getting the ingest time onto every event
 
-<img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_01.png" width="700" alt="Packetbeat JSON log showing an x509 certificate signed by unknown authority error during an early test run">
-
 Both detection rules need a timestamp field they can run their look-back window against. The PCAP's own packet times are from July 2020, so a rule can't use `@timestamp` directly, that would mean scanning years back on every run. The field that should hold "when this got ingested," `event.ingested`, showed up as empty on every single one of the 71 events I'd written. Packetbeat's config had `pipeline: pcap-ingest` set, and testing that pipeline directly against Elasticsearch (`_ingest/_simulate`) proved it worked fine on its own. So config said use the pipeline, Elasticsearch could run the pipeline, and the actual written documents never went through it anyway. I never found out why Packetbeat itself wasn't sending the pipeline with its write requests, that's still an open question. What fixed it was going around the problem instead of through it: `index.final_pipeline` is a setting that lives on the index template rather than in the client's request. My first guess at why that mattered was incomplete, I knew it "runs always, last," but not the actual deciding point Claude filled in: any pipeline a client names in its own request can simply replace a regular pipeline, while `final_pipeline` runs after whichever pipeline ran and no client can switch it off. Setting `setup.template.settings: index.final_pipeline: pcap-ingest` in `packetbeat.yml`, then deleting the data stream so the setting applied to a freshly created backing index, got `event.ingested` into all 71 documents, no exceptions.
 
 <img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_02.png" width="700" alt="Kibana Discover showing 71 documents with event.ingested now present on every one, packet time from 2020 next to ingest time from 2026">
@@ -132,7 +134,7 @@ The reverse shell on port 4242 is raw TCP with no application protocol Packetbea
 
 <img src="/assets/img/posts/elastic-detection-lab/elastic-detection-lab_06.png" width="700" alt="Kibana Discover showing the port 4242 flow with an event duration of about 10 milliseconds, despite the real shell session lasting minutes">
 
-`event.duration` on that flow was about 10 milliseconds. The real shell session in the 2020 capture ran for minutes. The cause is a replay option in Packetbeat (`-t`, replay as fast as possible with no waiting between packets) combined with flows being timed on Packetbeat's own clock rather than the packet's original timing, so the whole multi-minute session compresses into however long the replay took. This stayed an open question rather than something I fixed: getting a flow's real packet-time duration back would mean a different tool entirely (something like Zeek, which keeps connection records tied to packet time), and that's its own project for later, not something I built.
+`event.duration` on that flow was about 10 milliseconds. The real shell session in the 2020 capture ran for minutes. Claude researched the cause and checked it against Packetbeat's documentation: a replay option in Packetbeat (`-t`, replay as fast as possible with no waiting between packets) combined with flows being timed on Packetbeat's own clock rather than the packet's original timing, so the whole multi-minute session compresses into however long the replay took. This stayed an open question rather than something I fixed: getting a flow's real packet-time duration back would mean a different tool entirely, and Claude pointed me to something like Zeek, which keeps connection records tied to packet time. That's its own project for later, not something I built.
 
 My first instinct for the port rule itself was a denylist: block specific ports I already knew were bad, 4242 among them. Claude pointed out the obvious weakness, an attacker who picks any other port walks straight past a list like that, and pushed me toward an allowlist instead: the server rarely opens outbound connections at all, so flag everything except the few ports it has a real reason to use. Checking which ports the server actually opened turned up 443, 53, and 8080. I'd assumed 8080 was my own Elastic stack's traffic leaking in. Checking its actual destination before allowing it ruled that out: 8080 went straight to the attacker's IP, not to anything of mine.
 

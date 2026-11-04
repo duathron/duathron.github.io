@@ -9,29 +9,29 @@ image:
 
 ## Introduction
 
-This room drops you straight into a Sysmon log, already converted to XML, from a Windows host that's been compromised. There's no email, no pcap, just one event log and a trail of process-create events to follow from a disguised download, back to the process that kicked the whole thing off, and forward to the persistence mechanism the attacker left behind.
+This room drops you straight into two Windows event logs, a Sysmon log and a PowerShell log, both converted to XML, from a host that's been compromised. The Sysmon log holds a trail of process-create events to follow from a disguised download, back to the process that kicked the whole thing off, and forward to the persistence mechanism the attacker left behind. The PowerShell log holds the content of the script that was downloaded.
 
 ## Theory
 
 - **Sysmon event chains.** Every process-create event records its own `ProcessId` alongside the `ParentProcessId` and `ParentImage` of whatever launched it. Grep for one value, find the matching event, read off its parent, grep for that: it's a chain you can walk by hand.
-- **Command-line globbing as evasion.** Windows lets you reference a binary via a wildcard path expression instead of its literal name, so a command can invoke `certutil.exe` without the string `certutil` ever appearing directly in the command line that gets logged.
-- **PowerShell Script Block Logging.** When enabled, this captures the actual code PowerShell executes, after any string concatenation or obfuscation has already been resolved. An attacker building a command out of dozens of joined string fragments still ends up logged in its plain, assembled form.
+- **A wildcard in the command line.** Here the PowerShell command looks up the binary with `gci C:\Windows\System32\certu*.exe`, so the literal string `certutil` never appears in the logged PowerShell command line. (The certutil process's own event still names `certutil.exe`, which matters further down.)
+- **PowerShell Script Block Logging.** The PowerShell log records the script's text as `ScriptBlockText`. In this log the strings are still split into fragments (`'a'+'b'`, `-join(...)`): the script is readable, but the fragments still need joining.
 
 ## Walkthrough
 
 ### Finding the download, certutil wildcarded
 
-Starting broad, I grepped the converted log for anything mentioning `cert` or `wev`:
+I started simple, grepping the converted Sysmon log for the PowerShell v1.0 executable, and found a PowerShell command line that calls certutil as `certu*.exe`. I also grepped for `cert` or `wev`, which pulled in the certutil events and some `wevtutil.exe` ones:
 
 ```bash
 cat sysmon.xml | grep -niE '(cert|wev)'
 ```
 
-Most of it is `wevtutil.exe` clearing event logs, which is for cleanup after the fact, not the way in. But one line stands out: a PowerShell command line that resolves `certutil.exe` indirectly, via `(gci C:\Windows\System32\certu*.exe)[0].FullName`, instead of calling it by name directly:
+A few hits are `wevtutil.exe` calls clearing event logs. They sit at the top of the file, before the chain. The PowerShell command line from before shows up again here, with `cert` highlighted inside `certu*.exe`: it resolves `certutil.exe` indirectly, via `(gci C:\Windows\System32\certu*.exe)[0].FullName`, instead of calling it by name directly:
 
 <img src="/assets/img/posts/handbook-for-the-recently-compromised/handbook-for-the-recently-compromised_01.png" width="700" alt="Grep across sysmon.xml for cert and wev, showing wevtutil log-clearing events and a PowerShell command resolving certutil via a wildcard path">
 
-Pulling the full event for that PowerShell process shows the whole command: it resolves `certutil.exe` via the wildcard, uses it to download `pipeline-sync.ps1` from `http://pipeline-cdn.thm:8088/`, then immediately runs the downloaded script with `-ep bypass`. The event also gives up the user context (`THM-JCOLLINS\j.collins`) and a `ParentProcessId` of `6052`:
+Pulling the full event for that PowerShell process (a grep on its `Image` line with `-A15`) shows the whole command: it resolves `certutil.exe` via the wildcard, uses it to download `pipeline-sync.ps1` from `http://pipeline-cdn.thm:8088/`, then immediately runs the downloaded script with `-ep bypass`. The event also gives up the user context (`THM-JCOLLINS\j.collins`) and a `ParentProcessId` of `6052`:
 
 <img src="/assets/img/posts/handbook-for-the-recently-compromised/handbook-for-the-recently-compromised_02.png" width="700" alt="Full Sysmon event for the PowerShell process, showing the certutil wildcard download command, user j.collins, and ParentProcessId 6052">
 
@@ -45,11 +45,11 @@ cat sysmon.xml | grep -niE '"ProcessId">6052<' -A15
 
 <img src="/assets/img/posts/handbook-for-the-recently-compromised/handbook-for-the-recently-compromised_03.png" width="700" alt="Sysmon event for ProcessId 6052, showing mshta.exe executing pipeline-check.hta from the user's Downloads folder">
 
-`mshta.exe "C:\Users\j.collins\Downloads\pipeline-check.hta"` is the actual start of the chain: an HTA file, opened directly, that runs PowerShell, which wildcard-resolves `certutil`, which downloads and executes `pipeline-sync.ps1`.
+`mshta.exe` opening `C:\Users\j.collins\Downloads\pipeline-check.hta` is the actual start of the chain: an HTA file, opened directly, that runs PowerShell, which wildcard-resolves `certutil` to download `pipeline-sync.ps1`, and then PowerShell runs the script. In the log, `explorer.exe` is the parent of that `mshta.exe` event.
 
 ### Persistence: the scheduled task
 
-With the download-and-execute stage mapped out, I went looking for what the downloaded script actually did once it ran. Grepping for `sched` finds a `schtasks.exe` call:
+The room also asks about a scheduled-task technique. A grep for `sched` finds a `schtasks.exe` call:
 
 ```bash
 cat sysmon.xml | grep -niE 'sched' -A20
@@ -59,35 +59,35 @@ cat sysmon.xml | grep -niE 'sched' -A20
 "C:\Windows\system32\schtasks.exe" /create /tn StudioPipelineSync /tr "powershell -nop -w hidden -f C:\Users\j.collins\AppData\Roaming\PipelineSync\pipeline-sync.ps1" /sc onlogon /rl highest /f
 ```
 
-<img src="/assets/img/posts/handbook-for-the-recently-compromised/handbook-for-the-recently-compromised_04.png" width="700" alt="Sysmon event showing schtasks.exe creating a scheduled task named StudioPipelineSync that reruns pipeline-sync.ps1 on every logon">
+<img src="/assets/img/posts/handbook-for-the-recently-compromised/handbook-for-the-recently-compromised_04.png" width="700" alt="Sysmon event showing schtasks.exe creating a scheduled task named StudioPipelineSync that runs a pipeline-sync.ps1 from AppData Roaming at every logon">
 
-The `ParentImage` on this event is `powershell.exe`, and its `ParentCommandLine` is `-ep bypass -f ...\pipeline-sync.ps1`, the exact script that got downloaded in the first stage. So the downloaded script's own job is to set up persistence: a scheduled task that reruns it on every logon, running with the highest available privilege level.
+The `ParentImage` on this event is `powershell.exe`, and its `ParentCommandLine` is `-ep bypass -f ...\pipeline-sync.ps1`, the exact script that got downloaded in the first stage. So the script sets up persistence: a scheduled task that runs a script of the same name from `AppData\Roaming` at every logon, with `/rl highest`.
 
 ### Reading the script block: the flag as a base64 blob
 
-PowerShell's Script Block Logging captured `pipeline-sync.ps1` in full, past whatever string-concatenation obfuscation it used to build its own commands. Past the beacon request and the same `schtasks` call seen above, two lines stood out:
+The PowerShell log's `ScriptBlockText` captured the content of `pipeline-sync.ps1`. The strings in it are still split into fragments (`-join(...)`, `'a'+'b'`), but the script is readable. Past an `Invoke-WebRequest` to the same host and the same `schtasks` call seen above, two lines stood out:
 
 ```powershell
 $blob = ('VEhNe3R'+'IM19Ha'+'D'+'BzdF93MX'+'RIX1Ro'+'M19'+'NMDVUfQ='+'=')
 $flag = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($blob))
 ```
 
-<img src="/assets/img/posts/handbook-for-the-recently-compromised/handbook-for-the-recently-compromised_05.png" width="700" alt="PowerShell Script Block Text log showing the deobfuscated pipeline-sync.ps1 content, including a base64-encoded blob assigned to a flag variable">
+<img src="/assets/img/posts/handbook-for-the-recently-compromised/handbook-for-the-recently-compromised_05.png" width="700" alt="PowerShell ScriptBlockText log showing pipeline-sync.ps1 with its strings still split into fragments, including a base64 blob that is decoded into a flag variable">
 
-The script writes that decoded value out to a cache file under `%TEMP%\PipelineSync\`. Feeding the same base64 string into CyberChef's From Base64 gives the flag directly. No decryption needed this time, just string concatenation hiding a plain base64 blob in plain sight.
+The script writes that decoded value out to a cache file under `%TEMP%\PipelineSync\`. Feeding the same base64 string into CyberChef's From Base64 gives the flag directly. No decryption needed, just string concatenation around a base64 blob.
 
 ## Lessons Learned
 
-- A wildcard glob in a command line (`certu*.exe`) is easy to miss if you're grepping for the literal binary name. I started broad with PowerShell itself and only noticed the wildcard once I was already reading the full command.
-- Script Block Logging turning obfuscated, string-concatenated PowerShell back into its final, readable form was the part that actually made this solvable. Without it, the flag would've stayed buried in dozens of joined string fragments.
-- Walking this log by `ProcessId`/`ParentProcessId`, one grep at a time, was slow, but it was the only way I had to put the chain back together with just one event log to go on.
+- A wildcard glob in a command line (`certu*.exe`) is easy to miss if you're grepping for the literal binary name. I started by grepping for PowerShell itself and only noticed the wildcard once I was already reading the full command.
+- The PowerShell log's `ScriptBlockText` gave me the script itself, and that was the part that made this solvable. The strings in it were still split into fragments, but they were short enough to join up. Without that log I'd have had the certutil download and the scheduled task from Sysmon, and no view of the script's contents.
+- Walking the Sysmon log by `ProcessId`/`ParentProcessId`, one grep at a time, was the only way I had to put the chain back together.
 
 ## Defensive Takeaways
 
-- PowerShell Script Block Logging is the only reason the base64 payload was recoverable at all. Without it, defenders would see the certutil download and nothing about what the script actually did afterward.
-- Detection has to match the download's behavior, not the literal command-line string. `certu*.exe` defeats name-based detection; matching on `certutil.exe making a network connection and writing a file` instead would have caught it regardless of how the binary got invoked.
-- `mshta.exe` has very little legitimate use in a modern environment. Blocking or alerting on it outright would have stopped the whole chain at its actual starting point, before certutil or the scheduled task ever ran.
-- A scheduled task created with `/rl highest /sc onlogon`, whose parent process is `powershell.exe` rather than an installer, is worth alerting on by itself — that combination is a persistence pattern, not routine software setup.
+- PowerShell Script Block Logging is the reason I could read the base64 payload in this room. Without it, the Sysmon log alone shows the certutil download and the scheduled task, but not what is inside the script.
+- `certu*.exe` would slip past a rule that looks for `certutil` in the PowerShell command line. One idea, which I didn't test in the room: match on the certutil process itself, since its process-create event here names `certutil.exe` and shows `-urlcache -f`.
+- `mshta.exe` opening an `.hta` file from a user's Downloads folder is where this chain starts, and I'd want an alert on that.
+- In this log the scheduled task came from `powershell.exe` with `/rl highest /sc onlogon`. That combination seems worth an alert.
 
 ## References
 
