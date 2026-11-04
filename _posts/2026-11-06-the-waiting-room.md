@@ -19,71 +19,75 @@ image:
 
 ## Introduction
 
-The Waiting Room hands you three artifacts from a compromise at a company called Meridian Office Supplies: a raw phishing email (`vendor.eml`), a set of Sysmon logs converted from `.evtx`, and a network capture (`incident.pcap`). The job is to work out what the email actually delivered, trace it through the host logs to execution, and follow the trail all the way to data leaving the network. No single tool does this one. It's email headers, a JScript deobfuscation puzzle, a Unicode trick I'd never run into before, and a stream cipher implemented by hand in plain JavaScript.
+The Waiting Room hands you three artifacts from a compromise at a company called Meridian Office Supplies: a raw phishing email (`vendor.eml`), a Sysmon log converted from `.evtx`, and a network capture (`incident.pcap`). The job is to work out what the email actually delivered, trace it through the host log to execution, and work out what left the workstation. No single tool does this one. It's email headers, an obfuscated JScript block I needed AI help to read, a Unicode trick I'd never run into before, and a stream cipher (RC4) inside that script.
 
 ## Theory
 
 A few things came up that I had to look up or confirm before they made sense:
 
-- **Right-to-Left Override (U+202E).** A Unicode control character that forces everything after it to render right-to-left. Drop it into a filename before a reversed extension and the real extension (`.hta`) displays as something else entirely (`.pdf`). I'd never run into this trick before; I only found out what it was by looking up the codepoint mid-room.
-- **RC4.** A stream cipher: a key-scheduling pass that shuffles a 256-byte state array using the key, then a pseudo-random generation pass that XORs the keystream against the data. I didn't recognize the algorithm on sight. An AI assistant I asked for help with the obfuscated script identified it as RC4 once I described what `transform()` was doing.
-- **Sysmon event chains.** Each process-create event carries its own `ProcessId` and the `ParentProcessId`/`ParentImage` of whatever spawned it, so you can walk a chain of execution backwards from any single event.
+- **Right-to-Left Override (U+202E).** A Unicode character that makes the text from that point on display right-to-left, which can be used to disguise file extensions. I'd never run into this trick before; I only found out what it was by looking up the codepoint mid-room.
+- **RC4.** A stream cipher: as the AI assistant described it to me, it turns the key into a keystream and XORs that with the data. The assistant I gave the whole script to named it as RC4.
+- **Sysmon event chains.** In this log, each process-create event shows its own `ProcessId` and a `ParentProcessId`/`ParentImage`, and in the `conhost.exe` event, the `ParentProcessId` (1996) is the PID of `cscript.exe`.
 
 ## Walkthrough
 
 ### Reading the phishing email
 
-`cat vendor.eml` shows a message from "Luke Sullivan, Accounts | Meridian Office Supplies" (`accounts@meridian.thm`) asking to confirm an invoice for the Friday payment run. Attached to it, as a MIME part, is `Remittance.one` (`Content-Type: application/onenote`, base64-encoded):
+`cat vendor.eml` shows a message signed Luke Sullivan, Accounts | Meridian Office Supplies (`accounts@meridian.thm`), asking whether something can go in the Friday payment run. Attached to it, as a MIME part, is `Remittance.one` (`Content-Type: application/onenote`, base64-encoded):
 
 <img src="/assets/img/posts/the-waiting-room/the-waiting-room_01.png" width="700" alt="vendor.eml shown in a terminal with cat, with a MIME part for Remittance.one as application/onenote, base64-encoded">
 
-Running `shasum -a 256` on the attachment gives a hash, but at this point it means nothing yet. I didn't have anywhere to check it against.
+I also ran `shasum -a 256` on the attachment. That hash comes back further down.
 
 ### Peeling back the OneNote payload
 
-Pulling the base64 blob from the email into CyberChef, stripping whitespace and null bytes, then decoding from base64 turns the wall of text into a `<script language="JScript">` block: an `entries` array of hex strings, a `value()` function that XORs each byte against `0x39` to decode them, and a `transform()` function that shuffles a 256-byte array using a key and then XORs that against the data (some kind of stream cipher, though at this point I didn't know which one). The whole thing builds an `ActiveXObject` HTTP request, downloads something, decrypts it, and writes it to disk:
+Pulling the base64 blob from the email into CyberChef, removing null bytes and whitespace, decoding from base64 and running Strings turns the wall of text into a `<script language="JScript">` block: an `entries` array of hex strings, a `value()` function, a `transform()` function and several `ActiveXObject`s. My note at the time: a JavaScript that writes characters to a file in a created folder. I didn't understand more of it yet, and `VBk$` in the output looked like Visual Basic to me, though I wasn't sure:
 
-<img src="/assets/img/posts/the-waiting-room/the-waiting-room_02.png" width="700" alt="CyberChef recipe with Remove null bytes, Remove whitespace, and From Base64 decoding the attachment into a JScript loader">
+<img src="/assets/img/posts/the-waiting-room/the-waiting-room_02.png" width="700" alt="CyberChef recipe with Remove null bytes, Remove whitespace, From Base64 and Strings decoding the attachment into a JScript block">
 
 ### Tracing the detonation in Sysmon
 
-Converting the Sysmon `.evtx` to JSON and piping it through `jq` turns up the moment this actually runs: `ONENOTE.EXE` spawning with a `TargetFilename` of `C:\Users\m.smith\Downloads\PO-1048\Remittance_<something>fdp.hta`. Except that's not quite what it reads as on screen. The raw JSON shows reversed characters sitting right before the extension:
+I converted the Sysmon `.evtx` to JSON with `evtx_dump`, so I could grep for my hints and use `jq` to get the whole event around a hit. One hit for `Remittance.one` was an event with `m.smith` as the ParentUser and a command line with `ONENOTE.EXE` opening `C:\Users\MC0CD~1.SMI\AppData\Local\Temp\pid-6024\Remittance.one`. There was no process with PID 6024 in the log. The event pointed to the `ONENOTE.EXE` process with a PPID of 4404, which also wasn't present as a PID.
 
-<img src="/assets/img/posts/the-waiting-room/the-waiting-room_03.png" width="700" alt="Sysmon event converted to JSON, showing ONENOTE.EXE with a TargetFilename containing reversed characters before the extension">
+Looking further into "Remittance", I found a file-creation event from `ONENOTE.EXE` with a `TargetFilename` of `C:\Users\m.smith\Downloads\PO-1048\Remittance_<something>fdp.hta`. That's not quite what it reads as on screen. The text after `Remittance_` shows up reversed:
+
+<img src="/assets/img/posts/the-waiting-room/the-waiting-room_03.png" width="700" alt="Sysmon file-creation event converted to JSON, showing ONENOTE.EXE with a TargetFilename in Downloads whose text after Remittance_ is displayed reversed">
 
 ### The Right-to-Left Override trick
 
-I was stuck on this for a while. The filename just looked broken. Going back through my own notes I found the character sitting right before the reversed part: `<0x202E>`. A quick search told me what it was: U+202E, Right-to-Left Override, a Unicode control character that flips the display direction of everything after it. So `Remittance_<U+202E>fdp.hta` renders on screen as `Remittance_ath.pdf`, a `.hta` file wearing a `.pdf` costume, purely through how the text gets displayed and not through any change to the actual file:
+Extensions and other parts of file names in other log events were written backwards too, and nothing in the log explained it. My own notes had a `<0x202E>` sitting right before the reversed extensions (`fdp` for `pdf`). I looked it up, and Google's search assist gave me a short explanation: U+202E, Right-to-Left Override, a Unicode character that flips the display direction of the text from that point on. So with `Remittance_<U+202E>fdp.hta`, a viewer that honors the character shows `Remittance_ath.pdf`, which is also how VirusTotal later listed the file, while the stored name still ends in `fdp.hta`:
 
-<img src="/assets/img/posts/the-waiting-room/the-waiting-room_04.png" width="700" alt="Grep output highlighting the U+202E Right-to-Left Override codepoint sitting before the reversed file extension">
+<img src="/assets/img/posts/the-waiting-room/the-waiting-room_04.png" width="700" alt="My notes file showing a stray 0x202e codepoint right before the reversed extension in the TargetFilename">
 
 ### From .hta to .js
 
-Following the process chain further, `mshta.exe` running that `.hta` leads to `cscript.exe //B //Nologo` executing `C:\Users\m.smith\AppData\Local\Meridian\receipt.js`, passed the argument `MR-6106-028`, the same invoice number from the original email:
+With an `.hta` file in hand, I looked for `mshta.exe` next. That led me to `cscript.exe //B //Nologo` executing `C:\Users\m.smith\AppData\Local\Meridian\receipt.js`, passed the argument `MR-6106-028`. The event in the screenshot is a `conhost.exe` whose parent is that `cscript.exe`, with a `ParentProcessId` of 1996:
 
 <img src="/assets/img/posts/the-waiting-room/the-waiting-room_05.png" width="700" alt="Sysmon JSON showing cscript.exe launching receipt.js with the argument MR-6106-028, parent of a conhost.exe process, under user m.smith">
 
-The email header had already given up the hosting domain for all of this: `portal.meridian.thm`.
+The hostname of the downloaded stage was already in the email header: `portal.meridian.thm`.
 
 ### Checking VirusTotal
 
-I'd gotten this far and still couldn't answer one of the room's questions. The hash I ran earlier just wasn't matching anything I'd tried. Then I realized I'd skipped the obvious step: actually checking it against VirusTotal. The SHA256 of `Remittance.one` came back flagged by several vendors as `trojan.rlotrick/camelot`, and a related file listed alongside it, `Remittance_ath.pdf`, was labeled `trojan.sload`. That second file's hash `[redacted]` was the actual answer I'd been missing, not the one I started with.
+I'd gotten this far and still couldn't answer the room's questions, and I didn't know why the SHA256 of the mail attachment wasn't recognized. Then I noticed I'd forgotten an important step: VirusTotal. The SHA256 of `Remittance.one` came back flagged by several vendors as `trojan.rlotrick/camelot`, and a related file listed alongside it, `Remittance_ath.pdf`, was labeled `trojan.sload`. That second file's hash `[redacted]` was the actual answer I'd been missing, not the one I started with.
 
-### Finding the exfiltrated data in the pcap
+### Looking through the pcap
 
-`incident.pcap` in Wireshark, under **File → Export Objects → HTTP**, lists three objects pulled from `portal.meridian.thm:8080`: a file named `remittance-v2.png`, and two objects both labeled `receipt`:
+`incident.pcap` in Wireshark, under **File → Export Objects → HTTP**, lists three objects with the hostname `portal.meridian.thm:8080`: a file named `remittance-v2.png` (`application/octet-stream`, 1709 bytes), and two objects both labeled `receipt` (`application/json`, 557 and 43 bytes):
 
 <img src="/assets/img/posts/the-waiting-room/the-waiting-room_06.png" width="700" alt="Wireshark Export HTTP Object List showing remittance-v2.png and two receipt objects from portal.meridian.thm:8080">
 
-`file` on the exported `remittance-v2.png` just says "data." It's not an actual image, despite the extension. The receipt objects look like binary noise too. Given what the JScript loader does (download, decrypt, write), this looked like the same pattern again: a payload disguised with the wrong extension, probably encrypted on the wire.
+`file` on the exported `remittance-v2.png` just says "data." It's not an actual image, despite the extension. My note at the time: probably exfiltrated data disguised as an image. `file` calls both receipt objects JSON text. When I read the receipt, though, it looked like binary, so probably encrypted, and that sent me back to the script.
 
-### Decrypting receipt.js with a bit of AI help
+Looking back at this after the next step: the AI assistant's explanation (next section) says the script fetches `remittance-v2.png` with a GET and treats the response as encrypted bytes. So `remittance-v2.png` is the downloaded stage, not exfiltrated data, and my guess about it was off.
 
-The downloader script writes a `cacheToken` into the file it drops, and I didn't know JavaScript well enough to work out on my own what that value was or how it got used. I gave the script to DuckDuckGo's AI assistant (GPT6-Luna) and asked it to walk me through it. It explained the XOR string decoding, confirmed `transform()` was RC4's key-scheduling and keystream generation, and worked out the actual `cacheToken` value from the decoded strings. Asking a follow-up question about what algorithm `transform()` actually implemented is what got me a clear answer: RC4, with the `cacheToken` as the key.
+### Getting the key from an AI assistant
+
+The script writes a `cacheToken` into a file it drops, and I didn't know JavaScript well enough to work out on my own what that value was or how it got used. I didn't want to run the script: setting up a sandbox for it would be a separate lab, and something worth thinking through. So I gave the script to DuckDuckGo's AI assistant (GPT6-Luna) to get the `cacheToken` without running it. It explained the function to me: the XOR string decoding, a GET request to `remittance-v2.png` whose response the script treats as encrypted bytes, `transform()` as an RC4-style key-scheduling and keystream routine, and the actual `cacheToken` value from the decoded strings. I still didn't fully understand the script, so I asked further questions, and it named the encryption method: RC4, with the `cacheToken` as the key. Its closing advice was to treat the downloaded payload as untrusted and analyze it only statically or in an isolated lab VM.
 
 ### Decrypting the receipt with CyberChef
 
-With the key in hand, CyberChef's RC4 recipe against the exported `receipt.bin`, key entered as hex, decrypts straight to a readable CSV:
+The `data` field in the 557-byte `receipt` object was base64-encoded. Decoding it gave `receipt.bin` (331 bytes), the encrypted receipt data. With the key in hand, CyberChef's RC4 recipe against `receipt.bin`, key entered as hex, gives a readable CSV:
 
 <img src="/assets/img/posts/the-waiting-room/the-waiting-room_07.png" width="700" alt="CyberChef RC4 recipe decrypting receipt.bin with the cacheToken as a hex passphrase, output showing an invoice CSV">
 
@@ -98,16 +102,16 @@ The SHA256 of that CSV content `[redacted]` was the room's final answer.
 
 ## Lessons Learned
 
-- I'd never heard of the Right-to-Left Override trick before this room. I stared at that reversed filename for longer than I'd like to admit before I remembered my own earlier note about the stray codepoint sitting next to it, and only understood what I was looking at after searching for the codepoint itself.
+- I'd never heard of the Right-to-Left Override trick before this room. The reversed extensions in the log had no explanation until I went back to my own earlier note about the stray codepoint sitting next to them, and I only understood what I was looking at after searching for the codepoint itself.
 - I got stuck on an unmatched hash for a while because I skipped VirusTotal entirely at first. Having the hash isn't the same as having checked it against anything.
-- I don't know JavaScript well, and I used an AI assistant to help read through the obfuscated loader rather than pretending I worked it out line by line myself. That's genuinely how I got through it, RC4 included. I wouldn't have named the algorithm on my own.
+- I don't know JavaScript well, and I used an AI assistant to help read through the obfuscated script. That's how I got through it, RC4 included.
 
 ## Defensive Takeaways
 
-- A detection rule flagging the U+202E Right-to-Left Override codepoint in filenames would have caught the disguised `.hta` before `mshta.exe` ever ran it. That character has almost no legitimate use in a filename.
-- `ONENOTE.EXE` spawning `mshta.exe`, which in turn spawns `cscript.exe`, is a chain an Office application has no business starting. An Attack Surface Reduction rule blocking Office apps from creating child processes would have stopped this at the very first step.
-- A mail gateway that inspects `.one`/OneNote attachments for embedded script content, instead of only matching known-bad hashes, would have had a shot at this before it ever reached `m.smith`'s inbox.
-- The exported `remittance-v2.png` was flagged by `file` as plain "data," not an image, despite the extension. A mismatch between declared Content-Type and actual content is a usable network-level indicator for catching disguised exfil or payload traffic on the wire.
+- One detection idea, which I didn't test in the room: flag the U+202E codepoint in a filename. In this log it sits right in the `TargetFilename` of the file-creation event for the `.hta`, well before the `conhost.exe` event in the screenshot.
+- Another, also untested: alert on `ONENOTE.EXE` writing an `.hta` file into a user's Downloads folder. That is the file-creation event in the log.
+- A third, untested: a mail gateway that looks inside `.one` attachments for embedded script content in addition to hash matching.
+- A fourth, untested: `remittance-v2.png` comes back as `application/octet-stream`, and `file` says it is plain "data," not an image. A `.png` like that is something I'd want to look at on the wire.
 
 ## References
 
