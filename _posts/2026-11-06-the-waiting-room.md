@@ -17,7 +17,7 @@ image:
   path: /assets/img/posts/the-waiting-room/cover.png
 ---
 
-## Introduction
+## Introduction 
 
 The Waiting Room hands you three artifacts from a compromise at a company called Meridian Office Supplies: a raw phishing email (`vendor.eml`), a Sysmon log converted from `.evtx`, and a network capture (`incident.pcap`). The job is to work out what the email actually delivered, trace it through the host log to execution, and work out what left the workstation. No single tool does this one. It's email headers, an obfuscated JScript block I needed AI help to read, a Unicode trick I'd never run into before, and a stream cipher (RC4) inside that script.
 
