@@ -13,6 +13,7 @@ tags:
   - pcap-analysis
   - cyberchef
   - windows-forensics
+published: true
 image:
   path: /assets/img/posts/the-waiting-room/cover.png
 ---
