@@ -8,19 +8,98 @@ on:
       - README.md
       - LICENSE
       - "__obsidian_vault/**"
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  # Posts are pushed ahead of time and Jekyll skips future-dated ones
+  # (future: false). The hourly schedule rebuilds the site once a post's
+  # `date:` has passed; the `due` job skips the build when none became due
+  # in the last 6 h (window >> cron interval, so delayed or dropped cron runs
+  # miss nothing; at worst a post is rebuilt a few times).
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
 
 jobs:
-  build:
+  due:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      run: ${{ steps.check.outputs.run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Check for posts that became due
+        id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          out="${GITHUB_OUTPUT:-/dev/stdout}"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "${GITHUB_REF:-}" != "refs/heads/main" ]; then
+            echo "dispatch from ${GITHUB_REF:-?} ignored, only main is deployed"
+            echo "run=false" >> "$out"
+            exit 0
+          fi
+          if [ "$EVENT_NAME" != "schedule" ]; then
+            echo "run=true" >> "$out"
+            exit 0
+          fi
+          now="${NOW_EPOCH:-$(date -u +%s)}"
+          from=$((now - 21600))
+          due=false
+          while IFS= read -r -d '' f; do
+            # first date: line inside the front matter (between the first two ---)
+            raw="$(awk '
+              { sub(/\r$/, "") }
+              NR == 1 { if ($0 !~ /^---[[:space:]]*$/) exit; next }
+              /^---[[:space:]]*$/ { exit }
+              /^date:/ { sub(/^date:[[:space:]]*/, ""); print; exit }
+            ' "$f")"
+            raw="${raw%%#*}"
+            raw="${raw//\"/}"
+            raw="${raw//\'/}"
+            raw="${raw#"${raw%%[![:space:]]*}"}"
+            raw="${raw%"${raw##*[![:space:]]}"}"
+            ts=""
+            if [ -n "$raw" ]; then
+              ts="$(date -u -d "$raw" +%s 2>/dev/null || true)"
+            fi
+            safe="${f//[[:cntrl:]]/?}"
+            if [ -z "$ts" ]; then
+              echo "warn: no parseable date in $safe, using filename date"
+              name="$(basename "$f")"
+              d="${name:0:10}"
+              case "$d" in
+                [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9])
+                  ts="$(date -u -d "$d 00:00:00 UTC" +%s 2>/dev/null || true)" ;;
+              esac
+            fi
+            if [ -n "$ts" ] && [ "$ts" -gt "$from" ] && [ "$ts" -le "$now" ]; then
+              echo "due: $safe"
+              due=true
+            fi
+          done < <(find _posts -type f -name '*.md' -print0)
+          echo "run=$due" >> "$out"
+
+  build:
+    needs: due
+    if: needs.due.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    # Builds run in order, so an older run can never reach `pages` after a newer one.
+    # The noop branch is defensive, normally unreachable (the job is skipped then).
+    concurrency:
+      group: ${{ needs.due.outputs.run == 'true' && 'pages-build' || format('pages-noop-build-{0}', github.run_id) }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Setup Ruby
         uses: ruby/setup-ruby@v1
@@ -39,11 +118,17 @@ jobs:
           path: "_site"
 
   deploy:
+    needs: [due, build]
+    if: github.ref == 'refs/heads/main' && needs.due.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    # Only the deploy job takes the `pages` group, so a no-op run never touches it.
+    # The pages-noop branch is defensive, normally unreachable (the job is skipped then).
+    concurrency:
+      group: ${{ needs.due.outputs.run == 'true' && 'pages' || format('pages-noop-{0}', github.run_id) }}
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
     permissions:
       pages: write
       id-token: write
